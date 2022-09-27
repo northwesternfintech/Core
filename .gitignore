@@ -1,0 +1,5 @@
+.ds_store
+env
+venv
+testing
+package.json
