@@ -1,14 +1,14 @@
 # Execution Platform Guidelines
 CCTX Documentation can be found here: [CCTX Documentation](https://docs.ccxt.com/en/latest/)
 ## We will be using CCTX (CryptoCurrency eXchange Trading Library) to perform all market orders
-### Goals:
+### Goals
 1. Write an API wrapper to simplify the process of making market orders
 2. Develop built-in data management in order to log every action (including API failures)
    * Will probably format data into CSVs with Pandas
    * These logs will be used by the Data Control team
 4. Make sure orders interops with the queue properly if an order fails
 
-## Best Practices
+### Best Practices
 1. Write documentation!!!
     * Include this before every function: """*description of what function does*"""
 2. Create unit tests to ensure all functions are working properly
