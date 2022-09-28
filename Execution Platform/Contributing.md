@@ -4,8 +4,8 @@ CCTX Documentation can be found here: [CCTX Documentation](https://docs.ccxt.com
 ### Goals:
 1. Write an API wrapper to simplify the process of making market orders
 2. Develop built-in data management in order to log every action (including API failures)
-  * Will probably format data into CSVs with Pandas
-  * These logs will be used by the Data Control team
+⋅⋅⋅* Will probably format data into CSVs with Pandas
+⋅⋅⋅* These logs will be used by the Data Control team
 4. Make sure orders interops with the queue properly if an order fails
 
 ## Best Practices
