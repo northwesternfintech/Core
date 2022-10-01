@@ -35,3 +35,5 @@ Kucoin Documentation can be found here: [Kucoin Websocket Documentation](https:/
     * 80% of code coverage before being pushed to the **test** branch
     * 100% unit coverage + integration tests verified before pushing to the **main** branch
 
+4. Use if name == __main__ as opposed to just main(). 
+
