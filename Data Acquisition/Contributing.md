@@ -6,11 +6,12 @@ Kucoin Documentation can be found here: [Kucoin Websocket Documentation](https:/
 ### Goals
 1. Query one websocket(for now, just Coinbase)
 2. Build an AWS wrapper that saves data to the cloud
-3. Develop a short API algo that runs every websocket fails (collaborate with execution platform team).
+3. Develop a short API algo that runs every websocket fails (collaborate with execution platform and desk devs).
 4. Universalize a file naming convention and paradigm to save data
-5. Use queues to get data to main_script
-6. Add redundancy through multiple sockets
-7. Store data locally and archive to AWS3 Glacier
+5. DOCUMENT SAID CONVENTION AND PARADIGM
+6. Use multiprocessing queues to get data to main_script
+7. Add redundancy through multiple sockets
+8. Store data locally and archive to AWS S3 Glacier
 
 ### Steps
 1. Build one websocket exchange entirely (Coinbase)
@@ -30,6 +31,7 @@ Kucoin Documentation can be found here: [Kucoin Websocket Documentation](https:/
 2. Create unit tests to ensure all functions are working properly
 
 3. 
-    * 50% of test cases must pass before being pushed to the **dev** branch
-    * 80% of test cases must pass before being pushed to the **main** branch
+    * 50% code coverage before being pushed to the **dev** branch
+    * 80% of code coverage before being pushed to the **test** branch
+    * 100% unit coverage + integration tests verified before pushing to the **main** branch
 
