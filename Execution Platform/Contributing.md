@@ -12,6 +12,9 @@ CCXT Documentation can be found here: [CCXT Documentation](https://docs.ccxt.com
 1. Write documentation!!!
     * Include this before every function: """*description of what function does*"""
 2. Create unit tests to ensure all functions are working properly
+3. 50% code coverage before being pushed to the dev branch
+80% of code coverage before being pushed to the test branch
+100% unit coverage + integration tests verified before pushing to the main branch
     * 50% of test cases must pass before being pushed to the **dev** branch
-    * 80% of test cases must pass before being pushed to the **main** branch
-
+    * 80% of test cases must pass before being pushed to the **test** branch
+    * 100% unit coverage + integration tests verified before pushing to the **main** branch
