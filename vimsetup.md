@@ -1,6 +1,6 @@
 Windows Command: winget install Neovim.Neovim
 
-MacOS Command: L MAC USER LOL
+MacOS Command:brew install neovim
 
 
 Restart PC. Now open a terminal, and type:
