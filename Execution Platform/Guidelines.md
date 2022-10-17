@@ -21,7 +21,7 @@ CCXT Documentation can be found here: [CCXT Documentation](https://docs.ccxt.com
     - get ledger history
     - transfer funds between accounts
    
-**Some of the necessary functions**
+**Some of the necessary functions (More in documentation)**
 - fetchBalance (): Fetch Balance.
 - createOrder (symbol, type, side, amount[, price[, params]])
 - createLimitBuyOrder (symbol, amount, price[, params])
