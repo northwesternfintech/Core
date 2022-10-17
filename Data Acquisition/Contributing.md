@@ -6,7 +6,7 @@
 [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
 ### Pandas
 [Pandas Documentation](https://pandas.pydata.org/docs/)
-### Developing a Simple Querying Algorithm for if Everything Breaks
+### Developing a Simple Querying Algorithm
 [Coinbase Documentation](https://www.coinapi.io/)
 ## Youtube Videos for Easier Understanding
 [Basic Binance Websocket Tutorial](https://youtu.be/z2ePTq-KTzQ)
