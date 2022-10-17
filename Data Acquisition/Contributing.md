@@ -4,10 +4,11 @@
 Websocket Documentation can be found here: [Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
 Coinbase Documentation can be found here: [Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/prime/docs/websocket-feed)
 Kucoin Documentation can be found here: [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
-## Pandas!
-## Developing a New 
-https://www.coinapi.io/
-# Youtube Videos for Easier Understanding Because Colorful Lines of Code Go Brrr
+## Pandas
+Pandas Documentaton can be found here: [Pandas Documentation](https://pandas.pydata.org/docs/)
+## Developing a Simple Querying Algorithm for if Everything Breaks
+Coin API Documentation can be found here: [Coinbase Documentation](https://www.coinapi.io/)
+# Youtube Videos for Easier Understanding
 ### Basic Binance Websocket Tutorial:
 https://youtu.be/z2ePTq-KTzQ
 ### Multiprocessing Tutorial: Watch Up to Video 31
