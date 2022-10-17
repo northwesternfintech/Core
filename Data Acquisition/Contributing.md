@@ -2,15 +2,15 @@
 Websocket Documentation can be found here: [Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
 Coinbase Documentation can be found here: [Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/prime/docs/websocket-feed)
 Kucoin Documentation can be found here: [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
-### Youtube Videos for Greater Understanding
-# Basic Binance Websocket Tutorial:
+# Youtube Videos for Greater Understanding
+### Basic Binance Websocket Tutorial:
 https://youtu.be/z2ePTq-KTzQ
-# Multiprocessing Tutorial: Watch Up to Video 31
+### Multiprocessing Tutorial: Watch Up to Video 31
 https://youtu.be/Lu5LrKh1Zno
-### Goals
+# Goals
 The data acquisition team's ultimate goal is to independently store real-time market level 1 and level 2 market data. If you've every used packages like yfinance to do basic data analysis on past stock data within set periods, we are essentially implementing those packages, with the advantage of being able to gain 1) real-time data, 2) bypassing API limits that restrict the rate of data acquisition 3) data convention interoperability (we can change our data formatting at any time). 
 
-### Broad Steps
+# Broad Steps
 To achieve the above goal, we will create a Python class called Websocket, which takes in the parameters 
 1. Query one websocket (for now, just Coinbase)
 2. Build an AWS wrapper that saves data to the cloud
