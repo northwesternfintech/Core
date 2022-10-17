@@ -2,8 +2,11 @@
 # Documentation Compilation
 ## For Direct Websocket Scraping
 [Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
+
 [Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/prime/docs/websocket-feed)
+
 [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
+
 ### Pandas
 [Pandas Documentation](https://pandas.pydata.org/docs/)
 ### Developing a Simple Querying Algorithm
