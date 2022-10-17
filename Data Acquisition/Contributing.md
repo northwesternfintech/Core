@@ -10,7 +10,9 @@
 [Coinbase Documentation](https://www.coinapi.io/)
 ## Youtube Videos for Easier Understanding
 [Basic Binance Websocket Tutorial](https://youtu.be/z2ePTq-KTzQ)
+
 [Multiprocessing Tutorial: Watch Up to Video 31](https://youtu.be/Lu5LrKh1Zno)
+
 [Async Tutorial](https://youtu.be/6RbJYN7SoRs)
 
 # Goals
