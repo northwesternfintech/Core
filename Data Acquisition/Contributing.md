@@ -1,14 +1,14 @@
 # Data Acquisition Guidelines
-### Documentation Compilation
+# Documentation Compilation
 ## For Direct Websocket Scraping
 Websocket Documentation can be found here: [Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
 Coinbase Documentation can be found here: [Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/prime/docs/websocket-feed)
 Kucoin Documentation can be found here: [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
-## Pandas
+### Pandas
 Pandas Documentaton can be found here: [Pandas Documentation](https://pandas.pydata.org/docs/)
-## Developing a Simple Querying Algorithm for if Everything Breaks
+### Developing a Simple Querying Algorithm for if Everything Breaks
 Coin API Documentation can be found here: [Coinbase Documentation](https://www.coinapi.io/)
-# Youtube Videos for Easier Understanding
+## Youtube Videos for Easier Understanding
 ### Basic Binance Websocket Tutorial:
 https://youtu.be/z2ePTq-KTzQ
 ### Multiprocessing Tutorial: Watch Up to Video 31
