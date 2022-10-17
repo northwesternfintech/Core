@@ -1,4 +1,3 @@
-import engine
 import matplotlib
 import pandas as pd
 import datetime
@@ -30,6 +29,9 @@ class Strategy(BackTester):
         self.start_balance = start_balance # benchmark for visualization
         self.portfolio = portfolio(starting_balance = start_balance, 
                                    transaction_cost = transaction_cost)
+        self.current_date = None    # datetime object for tracking the date in backtesting
+        self.open_close = None      # a boolean for tracking if it's currently market open/close
+                                    # True for open and False for close
     
     def back_testing(self, start_time=None, end_time=None):
         '''
@@ -41,13 +43,13 @@ class Strategy(BackTester):
         start = start_time or '2013-03-28'
         end = end_time or '2018-02-05'
 
-        current_time = datetime.strptime(start, "%Y-%m-%d").date()
+        self.current_time = datetime.strptime(start, "%Y-%m-%d").date()
         end_time = datetime.strptime(end, "%Y-%m-%d").date()
         
         print('\n started backtesting')
-        while current_time != end_time:
+        while self.current_time != end_time:
             pass
-        print('finished backtesting, started visualizing')
+        print('\n finished backtesting, started visualizing')
         
         self.visualize()
     
@@ -106,21 +108,46 @@ class Strategy(BackTester):
         handler for run_monthly, to be called in back_testing()
         '''
         pass
+
+    def place_order(self, stock_name, shares):
+        '''
+        handler for buy/sell, set shares > 0 for buy and < 0 for sell
+        this function should be called by users in the followed functions only
+
+        stock_name: string
+        shares: float
+        '''
+        stock_price = self.data['date'==self.current_date & 'Name'==stock_name]
+        if self.current_time: 
+            stock_price = stock_price['open']
+        else:
+            stock_price = stock_price['close']
+        self.portfolio.place_order(stock_name, stock_price, shares)
+
         
     ################################################################################
     # below are methods that the designer of strategy should override
     # developlers shouldn't modified anything below this line
     ################################################################################
-    
+    '''
+    Important Note to Users:
+
+                    Since we only have open/close data at the moment, 
+                    we can only place at-the-open/at-the-close orders.
+                    Users should place the orders in the corresponding
+                    functions below.
+
+    '''
+    ################################################################################
+
+
     def on_market_close(self):
         '''
         This method should be overided by the designer of strategy on an instance level
         with python's type package
         Should be executed before market close everyday
         '''
-        # it's mainly used for placing at-the-close orders and stock selection
-        # but at the moment, the resolution of data we have don't allow us to perform any
-        # at-the-close orders :(
+        # should be used for placing at-the-close orders and stock selection
         pass
 
     def on_market_open(self):
@@ -129,8 +156,7 @@ class Strategy(BackTester):
         with python's type package
         Should be executed before market open every virtual day
         '''
-        # due to resolution of data
-        # its functionality is pretty much the same as on_market_close()
+        # should be used for placing at-the-close orders and stock selection
         pass
     
     def run_daily(self):
@@ -139,6 +165,7 @@ class Strategy(BackTester):
         with python's type package
         Should be executed before market open every virtual day
         '''
+        pass
     
     def run_weekly(self):
         '''
@@ -147,6 +174,7 @@ class Strategy(BackTester):
         Should be executed before market open every virtual week on the day specified (or Mon as default)
         If date specified is not a trading date, then find the next nearest trading date
         '''
+        pass
         
     def run_monthly(self):
         '''
@@ -155,3 +183,6 @@ class Strategy(BackTester):
         Should be executed before market open every virtual month on the day specified (or 1st as default)
         If date specified is not a trading date, then find the next nearest trading date
         '''
+        pass
+
+        

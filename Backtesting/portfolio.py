@@ -4,14 +4,15 @@ class portfolio():
         
         self.balance = starting_balance or 10000
         self.transaction_cost = transaction_cost or 0
+        self.transactions = []
         self.holdings = [] # list of lists
                            # each sublist contains two elements: [stock_name, amount_holding]
 
-    def get_balance(self): return balance
+    def get_balance(self): return self.balance
     
-    def get_holdings(self): return holdings
+    def get_holdings(self): return self.holdings
     
-    def validate_order(self, stock_price, shares):
+    def validate_order(self, stock_name, stock_price, shares):
         '''
         this function validates if orders can be placed, it handles
         both buys and sells (shares > 0 for buy and < 0 for sell)
