@@ -1,23 +1,20 @@
 # Data Acquisition Guidelines
 # Documentation Compilation
 ## For Direct Websocket Scraping
-Websocket Documentation can be found here: [Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
-Coinbase Documentation can be found here: [Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/prime/docs/websocket-feed)
-Kucoin Documentation can be found here: [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
+[Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
+[Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/prime/docs/websocket-feed)
+[Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
 ### Pandas
-Pandas Documentaton can be found here: [Pandas Documentation](https://pandas.pydata.org/docs/)
+[Pandas Documentation](https://pandas.pydata.org/docs/)
 ### Developing a Simple Querying Algorithm for if Everything Breaks
-Coin API Documentation can be found here: [Coinbase Documentation](https://www.coinapi.io/)
+[Coinbase Documentation](https://www.coinapi.io/)
 ## Youtube Videos for Easier Understanding
-### Basic Binance Websocket Tutorial:
-https://youtu.be/z2ePTq-KTzQ
-### Multiprocessing Tutorial: Watch Up to Video 31
-https://youtu.be/Lu5LrKh1Zno
-### Async Tutorial
-https://youtu.be/6RbJYN7SoRs
+[Basic Binance Websocket Tutorial](https://youtu.be/z2ePTq-KTzQ)
+[Multiprocessing Tutorial: Watch Up to Video 31](https://youtu.be/Lu5LrKh1Zno)
+[Async Tutorial](https://youtu.be/6RbJYN7SoRs)
 
 # Goals
-The data acquisition team's ultimate goal is to independently store real-time market level 1 and level 2 market data. If you've every used packages like yfinance to do basic data analysis on past stock data within set periods, we are essentially implementing those packages, with the advantage of being able to gain 1) real-time data, 2) bypassing API limits that restrict the rate of data acquisition 3) data convention interoperability (we can change our data formatting however we see fit). 
+The data acquisition team's ultimate goal is to independently store real-time market level 1 and level 2 market data. If you've every used packages like yfinance, we are essentially implementing those packages but in crypto, with the advantage of being able to gain 1) real-time data, 2) bypassing API limits that restrict the rate of data acquisition 3) data convention interoperability (we can change our data formatting however we see fit). 
 
 Once we have one websocket working, we will create multiple (ideally around 5 total) to ensure data output stability via redundancy. To account for the case in which all data sockets fail, we will also create a small algorithm that queries data from a pre-made API (likely CoinAPI!) that works around API limits as much as possible to ensure some level of data output (will likely be in deliberation with other teams).
 
