@@ -2,7 +2,7 @@
 CCXT Documentation can be found here: [CCXT Documentation](https://docs.ccxt.com/en/latest/)
 ## We will be using CCXT (CryptoCurrency eXchange Trading Library) to perform and log all market orders
 ### Goals
-1. Write an API wrapper to simplify the process of making market orders
+1. Write an API wrapper to perform all market orders and to retrieve all relevant data related to these orders and accounts.
 2. Develop built-in data management in order to log every action (including API failures)
    * Will probably format data into CSVs with Pandas
    * These logs will be used by the Data Control team
