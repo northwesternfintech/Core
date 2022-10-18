@@ -28,7 +28,7 @@ class Strategy(BackTester):
                     the next nearest trading date
         '''
         self.start_balance = start_balance # benchmark for visualization
-        self.portfolio = portfolio(starting_balance = start_balance, 
+        self.portfolio = portfolio.portfolio(starting_balance = start_balance, 
                                    transaction_cost = transaction_cost)
         self.current_date = None    # datetime object for tracking the date in backtesting
         self.open_close = None      # a boolean for tracking if it's currently market open/close
@@ -189,5 +189,3 @@ class Strategy(BackTester):
         If date specified is not a trading date, then find the next nearest trading date
         '''
         pass
-
-        
