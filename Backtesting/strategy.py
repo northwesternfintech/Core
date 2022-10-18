@@ -82,7 +82,7 @@ class Strategy(BackTester):
         
         date: datetime object
         '''
-        return date in self.nyse_holidays
+        return date in self.nyse_holidays # checking if date exists in holiday dict
     
     def next_nearest_trading_date(self, date):
         '''
@@ -91,8 +91,8 @@ class Strategy(BackTester):
         
         date: datetime object
         '''
-        while not self.is_trading_date(date):
-            date+= datetime.timedelta(days=1)
+        while not self.is_trading_date(date): # check if current date is trading date
+            date+= datetime.timedelta(days=1) # move onto next date
         
         return date
     
