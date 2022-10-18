@@ -1,54 +1,58 @@
-# Data Acquisition Guidelines
+# Core-Framework Guidelines
+
 # Documentation Compilation
-## Central Script
-[Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
 
-[Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/prime/docs/websocket-feed)
+## Python Command Line Interface (CLI)
 
-[Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
+[What are CLI's](https://realpython.com/command-line-interfaces-python-argparse/)
 
-### Python CLI
-[Pandas Documentation](https://pandas.pydata.org/docs/)
+[Argparse or Click CLI](https://towardsdatascience.com/how-to-write-user-friendly-command-line-interfaces-in-python-cc3a6444af8e)
+
+### Git / GitHub
+
+[Git Refresher](https://www.theodinproject.com/lessons/foundations-setting-up-git)
+
 ### APIS
-[Coinbase Documentation](https://www.coinapi.io/)
+
+[Writing an API in Python](https://towardsdatascience.com/the-right-way-to-build-an-api-with-python-cd08ab285f8f)
+
 ## Youtube Videos for Easier Understanding
-[Basic Binance Websocket Tutorial](https://youtu.be/z2ePTq-KTzQ)
 
-[Multiprocessing Tutorial: Watch Up to Video 31](https://youtu.be/Lu5LrKh1Zno)
+[Click-Based CLI](https://www.youtube.com/watch?v=TVFO2ABZqK8&t=996s)
 
-[Async Tutorial](https://youtu.be/6RbJYN7SoRs)
+[Git Tutorial](https://www.youtube.com/watch?v=RGOj5yH7evk)
+
+[Intro to PyBind (Python -> C++)](https://www.youtube.com/watch?v=_5T70cAXDJ0)
 
 # Goals
-The data acquisition team's ultimate goal is to independently store real-time market level 1 and level 2 market data. If you've every used packages like yfinance, we are essentially implementing those packages but in crypto, with the advantage of being able to gain 1) real-time data, 2) bypassing API limits that restrict the rate of data acquisition 3) data convention interoperability (we can change our data formatting however we see fit). 
 
-Once we have one websocket working, we will create multiple (ideally around 5 total) to ensure data output stability via redundancy. To account for the case in which all data sockets fail, we will also create a small algorithm that queries data from a pre-made API (likely CoinAPI!) that works around API limits as much as possible to ensure some level of data output (will likely be in deliberation with other teams).
+The main goal of the Core-Framework team is to deal with information management. We need to keep track of trades, balances, and holdings taken from teams across the board.
 
-We want to be able to take this data, universalize its formatting (probably .csv or .json), store it locally to servers. Then, our other teams will use our data how they see fit, and we can update our data convention based on their feedback.
+# IMPORTANT: do this through the api response calls, to ensure that inter-language data management is not required.
 
 # Broad Steps
-1. Query one websocket (for now, just Coinbase)
-2. Develop a short API algo that runs every websocket fails (collaborate with execution platform team).
-3. Universalize a file naming convention and paradigm to save data.
-4. Use queues to get data to a main_script.py which uses multiprocessing to sequence which websockets to scrape data from based on whether each websocket is dead or not.
-5. Add redundancy by creating multiple sockets.
-6. Store data locally and archive to AWS3 Glacier.
+
+1. Build in data storage and variables w/ local storage as well.
+2. Analyze and store server health data vs. time.
+3. Generate time series data about server health metrics
+4. Analyze and store Jenkins time series as well.
+5. Build structures to route data through the system.
+6. Network w/ Data Sockets team to move data through mp queue.
+7. Work with Execution Platform to get data logged
+8. Work with Backtesters to store and move logs.
 
 ### Initial Steps
-1. Build one websocket exchange entirely (Coinbase)
-    * Each websocket should ONLY take two multiprocessing queues (one for each level of market data), and a list of coins (for each ticker we want to scrape data from.
-    * Each websocket should be a class with member functions call each other to culminate in a function called  "Coinbase_Websocket.run" and have the queue stored within the class fill up with formatted data!
-    * Scraped data should be outputted into each respective queue (i.e. queue_1, queue_2)
-2. Implement multiple websockets following the same format
-3. Combine all the websockets to be called within a main_script file which cycles through broken/working websockets and contains the two queues which will be inputted into every websocket initialization
+
+1. While we're waiting for the rest of the teams, start work on the CLI, build the data offboarding from data, constant state things, and essentially everything that you can while waiting on the others.
+2. Put a team onto hooking onto a simple add script in C++ with Python.
+3. Prioritize I/O before everything else, work with other PMs to get that out.
+4. Build out from there - allocate devs into what is falling behind, build the central script as it goes.
+5. Implement connections between Data and the rest of the files through your central script.
 
 ### Beneficial Practices
+
 1. Write documentation!!!
-    * Include this before every function: """*description of what function does*"""
-    * Don't make it too long though; Ethan will slaughter me
-2. Create unit tests that ensure the following goals:
-    * each websocket receives data each tick
-    * the queue successfully outputs data in the correct sequence
-    * data is able to stored locally and to AWS
-    * the simple API algorithm doesn't get API limited and ratio'd to the ground
-    * the main_script is able to cycle through every websocket and also
-3. Ask me if you have data acquisition-related ANY questions. Even the most basic clarification ones!
+   - Include this before every function: """_description of what function does_"""
+   - Don't make it too long though; Ethan will slaughter us
+2. Create unit tests that ensure the code doesn't break Prod env
+3. Ask me if you have any info-framework-related questions. Even the most basic clarification ones! If I don't know it, we can figure it out together!
