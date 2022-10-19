@@ -82,7 +82,7 @@ class Strategy(BackTester):
         
         date: datetime object
         '''
-        return date in self.nyse_holidays # checking if date exists in holiday dict
+        return not date in self.nyse_holidays # checking if date exists in holiday dict
     
     def next_nearest_trading_date(self, date):
         '''

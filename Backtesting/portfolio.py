@@ -33,7 +33,7 @@ class portfolio():
             return False
             
         
-    def place_oder(self, stock_name, stock_price, shares): 
+    def place_order(self, stock_name, stock_price, shares): 
         """
         this function handles both buys and sells (shares > 0 for buy and < 0 for sell)
         first validate the order, if is valid, place the order and return True
