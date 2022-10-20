@@ -3,7 +3,7 @@
 ### For Direct Websocket Scraping
 [Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
 
-[Coinbase Websocket Documentation](#https://docs.cloud.coinbase.com/exchange/docs/websocket-channels)
+[Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/exchange/docs/websocket-channels)
 
 [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
 
