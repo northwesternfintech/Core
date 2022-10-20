@@ -25,9 +25,13 @@ Jay - Write out main_script.py
 3. Create the asynchronous run function and confirm that the JSON subscription outputs into queue_1.
 4. Test the websocket with a simple case and a print statement (see Coinbase).
 5. Write two asynchronous methods that basically just call run:
+
     A. ._main_ : awaits for the run
+
     B. ._run_ : runs _main_  via asyncio.
+
     C. ^ to be clear, the name of each of these are '(underscore)main(underscore)' and '(underscore)run(underscore)'.
+    
 6. Organize the market level 1 data into a singular pandas dataFrame (see Coinbase).
 7. Subscribe to market level 2 data and format it the same way as Coinbase does.
 
