@@ -3,13 +3,14 @@ import cement
 # TODO: Make ascii art banner
 BANNER = """
 
-NUFT 
+NUFT
 
 An interactive platform for using NUFT Core
-Docs: 
+Docs:
 """
 
 __all__ = ['BaseController']
+
 
 class BaseController(cement.Controller):
     class Meta:

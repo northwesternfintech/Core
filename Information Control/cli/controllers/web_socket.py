@@ -1,7 +1,7 @@
 import cement
 
 
-class WebsocketController(cement.Controller):
+class WebSocketController(cement.Controller):
     class Meta:
         label = 'websocket'
         description = 'start, stop, manage websockets'
@@ -36,10 +36,10 @@ class WebsocketController(cement.Controller):
     def start(self) -> None:
         if self.app.pargs.start_all and self.app.pargs.websocket_names:
             raise ValueError("Conflicting websockets to start")
-        
+
         print(self.app.pargs)
 
-        #TODO
+        # TODO
 
         # Validate inputted names
         # Start web sockets
@@ -61,10 +61,10 @@ class WebsocketController(cement.Controller):
     def stop(self) -> None:
         if self.app.pargs.stop_all and self.app.pargs.websocket_names:
             raise ValueError("Conflicting websockets to stop")
-        
+
         print(self.app.pargs)
 
-        #TODO
+        # TODO
         # Validate inputted names
         # Stop web sockets
 
@@ -81,5 +81,3 @@ class WebsocketController(cement.Controller):
         # Actually get status data
 
         self.app.render(data, headers=headers)
-
-    

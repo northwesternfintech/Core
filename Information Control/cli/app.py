@@ -1,7 +1,8 @@
 import cement
 
 from controllers.base import BaseController
-from controllers.web_socket import WebsocketController
+from controllers.web_socket import WebSocketController
+from controllers.backtest import BacktestController
 
 
 class CoreCLI(cement.App):
@@ -11,14 +12,17 @@ class CoreCLI(cement.App):
         output_handler = 'tabulate'
         handlers = [
             BaseController,
-            WebsocketController
+            WebSocketController,
+            BacktestController
         ]
 
     def setup(self) -> None:
         super().setup()
         # TODO: Add additional setup
 
-with CoreCLI() as app:
-    app.run()
+
+if __name__ == "__main__":
+    with CoreCLI() as app:
+        app.run()
 
    
