@@ -35,11 +35,11 @@ The main goal of the Core-Framework team is to deal with information management.
 1. Build in data storage and variables w/ local storage as well.
 2. Analyze and store server health data vs. time.
 3. Generate time series data about server health metrics
-4. Analyze and store Jenkins time series as well.
-5. Build structures to route data through the system.
-6. Network w/ Data Sockets team to move data through mp queue.
-7. Work with Execution Platform to get data logged
-8. Work with Backtesters to store and move logs.
+4. Build structures to route data through the system.
+5. Network w/ Data Sockets team to move data through mp queue.
+6. Work with Execution Platform to get data logged
+7. Work with Backtesters to store and move logs.
+8. Allocate System resources for executing tasks.
 
 ### Initial Steps
 
