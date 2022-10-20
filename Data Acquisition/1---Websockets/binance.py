@@ -1,11 +1,13 @@
 #Dependencies
 import asyncio
-import websockets
-import Websocket_Class as ws
-import multiprocessing
 import json
-import pandas as pd
+import multiprocessing
 from datetime import datetime
 from uuid import uuid4
+
+import pandas as pd
+import websockets
+
+from web_socket import WebSocket
 
 # Build Websocket Class

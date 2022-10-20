@@ -1,11 +1,13 @@
 #Dependencies
 import asyncio
-import websockets
-import Websocket_Class as ws
-import multiprocessing
 import json
-import pandas
+import multiprocessing
 import time
 from datetime import datetime
+
+import pandas
+import websockets
+
+from web_socket import WebSocket
 
 # Build Gemini Websocket Class

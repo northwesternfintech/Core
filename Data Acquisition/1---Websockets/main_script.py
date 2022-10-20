@@ -4,14 +4,14 @@ import Kucoin_Websocket as ks
 import Coinbase_Websocket as cb
 import Gemini_Websocket as gm
 import Binance_Websocket as bc
-import Kraken_Websocket as kr
+import Kraken_Websocket as kr  # TODO: Fix these imports, and just import the class "from kraken import KrakenWebSocket"
 import pandas as pd
 import asyncio
 import schedule
 import datetime
 import os
 
-async def main(coins):
+async def main(coins):  # TODO: Don't think this needs to be async
     with cf.ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
         pass
 
