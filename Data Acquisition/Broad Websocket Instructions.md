@@ -7,6 +7,10 @@
 
 [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
 
+[Binance Websocket Documentation](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md#all-market-tickers-stream)
+
+[Kraken Websocket Documentation](https://docs.kraken.com/websockets/#message-ping)
+
 ### Pandas
 [Pandas Documentation](https://pandas.pydata.org/docs/)
 ### Developing a Simple Querying Algorithm

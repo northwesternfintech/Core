@@ -7,7 +7,6 @@ import pandas as pd
 from datetime import datetime
 from uuid import uuid4
 
-
 #Build Websocket Class
 class Binance_Websocket():
 
