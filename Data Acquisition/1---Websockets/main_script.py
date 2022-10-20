@@ -15,10 +15,11 @@ async def main(coins):
     with cf.ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
         pass
 
+
+# Test if it works!
 def activate(coins):
     if __name__ == '__main__':
         asyncio.get_event_loop().run_until_complete(main(coins))
 
-# Tests
 coins = ['BTH-USDT']
 activate(coins)

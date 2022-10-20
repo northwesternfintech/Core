@@ -23,7 +23,7 @@
 [Pandas Documentation](https://pandas.pydata.org/docs/)
 
 ### Developing a Simple Querying Algorithm
-[Coinbase Documentation](https://www.coinapi.io/)
+[CoinAPI Documentation](https://www.coinapi.io/)
 
 ### Youtube Videos for Easier Understanding
 [Basic Binance Websocket Tutorial](https://youtu.be/z2ePTq-KTzQ)
@@ -31,6 +31,8 @@
 [Multiprocessing Tutorial: Watch Up to Video 31](https://youtu.be/Lu5LrKh1Zno)
 
 [Async Tutorial](https://youtu.be/6RbJYN7SoRs)
+
+[CoinAPI Tutorail](https://youtu.be/iIGNhBcj4zs)
 
 # Goals
 The data acquisition team's ultimate goal is to independently store real-time market level 1 and level 2 market data. If you've every used packages like yfinance, we are essentially implementing those packages but in crypto, with the advantage of being able to gain 1) real-time data, 2) bypassing API limits that restrict the rate of data acquisition 3) data convention interoperability (we can change our data formatting however we see fit). 
