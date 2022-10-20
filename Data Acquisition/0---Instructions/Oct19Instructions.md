@@ -21,7 +21,7 @@ Jay - Write out main_script.py
 
 ## Websocket Steps:
 1. Create initialization method that uses the parent class Websocket_Class to store queue_1, queue_2, and coins.
-2. Write wrapper functions that allow you to write the requisite private wrapper functions to request subscribe each websocket's ideal subscription methods (I would recommend that you subscribe to a market level 1 channel first)
+2. Write the requisite private wrapper functions to request subscriptions from each websocket (I would recommend that you subscribe to a market level 1 channel first).
 3. Create the asynchronous run function and confirm that the JSON subscription outputs into queue_1.
 4. Test the websocket with a simple case and a print statement (see Coinbase).
 5. Write #1: ._main_ and #2: ._run_ methods that #1: await for the run and then #2: run it via asyncio.
