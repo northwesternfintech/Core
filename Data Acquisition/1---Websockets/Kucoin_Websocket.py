@@ -6,4 +6,4 @@ import pandas
 import time
 from datetime import datetime
 
-#Build Kucoin Websocket Class
+# Build Kucoin Websocket Class

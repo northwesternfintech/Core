@@ -7,4 +7,4 @@ import pandas
 import time
 from datetime import datetime
 
-#Build Gemini Websocket Class
+# Build Gemini Websocket Class

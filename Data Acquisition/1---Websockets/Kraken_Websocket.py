@@ -7,4 +7,4 @@ import pandas
 import time
 from datetime import datetime
 
-#Build Kraken Websocket Class
+# Build Kraken Websocket Class

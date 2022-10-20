@@ -1,5 +1,6 @@
 import asyncio
 import websockets
+import Websocket_Class
 import requests
 import multiprocessing
 import time
@@ -12,13 +13,11 @@ from scipy.fft import idst
 from uuid import uuid4
 
 #https://docs.cloud.coinbase.com/exchange/docs/websocket-channels
-#Creating Coinbase Websocket Class 
-class Coinbase_Websocket():
+# Build Coinbase Websocket Class 
+class Coinbase_Websocket(Websocket):
     #Passing queue and other relevant information
     def __init__(self, queue_1, queue_2, coins = []):
-        self.queue_1 = queue_1
-        self.queue_2 = queue_2
-        self.coins = coins
+        Websocket.__init__(queue_1, queue_2, coins = [])
         self.channels = ['ticker', 'level2']
         self.sub_message = self.on_open()
    
