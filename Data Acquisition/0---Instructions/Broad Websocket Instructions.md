@@ -1,9 +1,9 @@
 # Data Acquisition Guidelines
 # Documentation Compilation
-## For Direct Websocket Scraping
+### For Direct Websocket Scraping
 [Websocket Documentation](https://websockets.readthedocs.io/en/stable/)
 
-[Coinbase Websocket Documentation](https://docs.cloud.coinbase.com/prime/docs/websocket-feed)
+[Coinbase Websocket Documentation](#https://docs.cloud.coinbase.com/exchange/docs/websocket-channels)
 
 [Kucoin Websocket Documentation](https://docs.kucoin.com/#apply-connect-token)
 
@@ -11,11 +11,21 @@
 
 [Kraken Websocket Documentation](https://docs.kraken.com/websockets/#message-ping)
 
+### Multiprocessing, Asyncio, Concurrent Futures
+
+[Multiprocessing Documentation](https://docs.python.org/3/library/multiprocessing.html)
+
+[Asyncio Documentation](https://docs.python.org/3/library/asyncio.html)
+
+[Concurrent Futures Documentation](https://docs.python.org/3/library/concurrent.futures.html)
+
 ### Pandas
 [Pandas Documentation](https://pandas.pydata.org/docs/)
+
 ### Developing a Simple Querying Algorithm
 [Coinbase Documentation](https://www.coinapi.io/)
-## Youtube Videos for Easier Understanding
+
+### Youtube Videos for Easier Understanding
 [Basic Binance Websocket Tutorial](https://youtu.be/z2ePTq-KTzQ)
 
 [Multiprocessing Tutorial: Watch Up to Video 31](https://youtu.be/Lu5LrKh1Zno)

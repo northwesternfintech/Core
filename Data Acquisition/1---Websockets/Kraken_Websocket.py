@@ -1,6 +1,7 @@
 # Dependencies
 import asyncio
 import websockets
+import Websocket_Class as ws
 import multiprocessing
 import json
 import pandas

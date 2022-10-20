@@ -1,6 +1,6 @@
 import asyncio
 import websockets
-import Websocket_Class
+import Websocket_Class as ws
 import requests
 import multiprocessing
 import time
@@ -12,12 +12,11 @@ from datetime import datetime
 from scipy.fft import idst 
 from uuid import uuid4
 
-#https://docs.cloud.coinbase.com/exchange/docs/websocket-channels
 # Build Coinbase Websocket Class 
-class Coinbase_Websocket(Websocket):
-    #Passing queue and other relevant information
-    def __init__(self, queue_1, queue_2, coins = []):
-        Websocket.__init__(queue_1, queue_2, coins = [])
+class Coinbase_Websocket(ws.Websocket):
+    # Passing queue_1, queue_2, coins, setting subscription message and channels to subscribe to
+    def __init__(self, queue_1, queue_2, coins):
+        ws.Websocket.__init__(self, queue_1, queue_2, coins)
         self.channels = ['ticker', 'level2']
         self.sub_message = self.on_open()
    
@@ -28,15 +27,14 @@ class Coinbase_Websocket(Websocket):
         subscribe_message["channels"] = self.channels
         return subscribe_message
     
-    async def run(self): #Full Asynchronous Run 
+    async def run(self): # Full Asynchronous Run 
         try:
             async with websockets.connect('wss://ws-feed.exchange.coinbase.com', max_size = 1_000_000_000) as websocket:
                 await websocket.send(json.dumps(self.sub_message))
                 while True:
                     message = await websocket.recv()
-                    # print(message)
                     temp_json = json.loads(message)
-                    #Setting Variables for Data Frame 
+                    # Organizing Data for pandas DataFrame
                     msg_data = []
                     time_id = []
                     curr_dt = None 
@@ -55,6 +53,7 @@ class Coinbase_Websocket(Websocket):
                             df = pd.DataFrame(data = msg_data, index = time_id)
                             print(df)
                             self.queue_1.put(df) 
+                    # If market 2 data
                     elif temp_json['type'] == 'l2update':
                         curr_dt = temp_json['time'].replace('Z', '')
                         curr_dt = curr_dt.replace('T', ' ')
@@ -85,17 +84,15 @@ class Coinbase_Websocket(Websocket):
         asyncio.run(self._main())
         
 
-    #goal is to get the DateTime from the Json and store into tickers 
-    #then put into database 
-#Async Script Start
+# Async Script Start
 async def main(coins): 
     q = multiprocessing.Queue()
     r = multiprocessing.Queue()
     cwr = Coinbase_Websocket(q, r, coins)
     await cwr.run()
 
-# q = multiprocessing.Queue()
-# r = multiprocessing.Queue()
-# coins = ['BTC-USDT', 'ETH-USDT']
-# cwr = Coinbase_Websocket(q, r,coins)
-# cwr._run_()
+q = multiprocessing.Queue()
+r = multiprocessing.Queue()
+coins = ['BTC-USDT', 'ETH-USDT']
+cwr = Coinbase_Websocket(q, r,coins)
+cwr._run_()
