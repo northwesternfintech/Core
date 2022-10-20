@@ -30,8 +30,8 @@ Jay - Write out main_script.py
 
     B. ._run_ : runs _main_  via asyncio.
 
-    C. ^ to be clear, the name of each of these are '(underscore)main(underscore)' and '(underscore)run(underscore)'.
-    
+    C. ^ to be clear, the name of these are '(underscore)main(underscore)' and '(underscore)run(underscore)'.
+
 6. Organize the market level 1 data into a singular pandas dataFrame (see Coinbase).
 7. Subscribe to market level 2 data and format it the same way as Coinbase does.
 
