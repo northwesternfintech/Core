@@ -32,7 +32,7 @@
 
 [Async Tutorial](https://youtu.be/6RbJYN7SoRs)
 
-[CoinAPI Tutorail](https://youtu.be/iIGNhBcj4zs)
+[CoinAPI Tutorial](https://youtu.be/iIGNhBcj4zs)
 
 # Goals
 The data acquisition team's ultimate goal is to independently store real-time market level 1 and level 2 market data. If you've every used packages like yfinance, we are essentially implementing those packages but in crypto, with the advantage of being able to gain 1) real-time data, 2) bypassing API limits that restrict the rate of data acquisition 3) data convention interoperability (we can change our data formatting however we see fit). 
