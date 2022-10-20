@@ -1,20 +1,23 @@
+from abc import ABC, abstractclassmethod
+
 import matplotlib
 import pandas as pd
 import holidays
 import datetime
-import portfolio
+from portfolio import Portfolio
+
 
 class BackTester:
-    
     def __init__(self, data_file_path=None):
         # init a backtester, retrieve data from local file
         # data are stored as a pd dataframe that has the following cols
-        # date; open; high; low; close; volume; Name
+        # date; open; high; low; close; volume; Name 
+        # TODO: Validate csv format
         self._data_file_path = data_file_path or 'data/2013-2018.csv'
         self.data = pd.read_csv(self._data_file_path)
-                    
-class Strategy(BackTester):
-    
+
+
+class Strategy(ABC, BackTester):  # TODO: Not sure why this originally inherits from BackTester if we don't use anything from it. Is BackTester supposed to be a parent class or a wrapper?
     def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None): 
         '''
         transaction_cost: float that determines the cost of every transaction
@@ -28,7 +31,7 @@ class Strategy(BackTester):
                     the next nearest trading date
         '''
         self.start_balance = start_balance # benchmark for visualization
-        self.portfolio = portfolio.portfolio(starting_balance = start_balance, 
+        self.portfolio = Portfolio(starting_balance = start_balance, 
                                    transaction_cost = transaction_cost)
         self.current_date = None    # datetime object for tracking the date in backtesting
         self.open_close = None      # a boolean for tracking if it's currently market open/close
@@ -64,7 +67,7 @@ class Strategy(BackTester):
         msg: a string that describes the action to be logged
         time: the time that the action took place
         '''
-        self.log.append([msg, time])
+        self.log.append([msg, time]) # probs a good place to use numpy or pandas for performance
     
     def visualize(self): 
         '''
@@ -82,7 +85,7 @@ class Strategy(BackTester):
         
         date: datetime object
         '''
-        return not date in self.nyse_holidays # checking if date exists in holiday dict
+        return date not in self.nyse_holidays # checking if date exists in holiday dict
     
     def next_nearest_trading_date(self, date):
         '''
@@ -145,7 +148,7 @@ class Strategy(BackTester):
     '''
     ################################################################################
 
-
+    @abstractclassmethod
     def on_market_close(self):
         '''
         This method should be overided by the designer of strategy on an instance level
@@ -153,8 +156,9 @@ class Strategy(BackTester):
         Should be executed before market close everyday
         '''
         # should be used for placing at-the-close orders and stock selection
-        pass
+        raise NotImplementedError
 
+    @abstractclassmethod
     def on_market_open(self):
         '''
         This method should be overided by the designer of strategy on an instance level
@@ -162,16 +166,18 @@ class Strategy(BackTester):
         Should be executed before market open every virtual day
         '''
         # should be used for placing at-the-close orders and stock selection
-        pass
+        raise NotImplementedError
     
+    @abstractclassmethod
     def run_daily(self):
         '''
         This method should be overided by the designer of strategy on an instance level
         with python's type package
         Should be executed before market open every virtual day
         '''
-        pass
+        raise NotImplementedError
     
+    @abstractclassmethod
     def run_weekly(self):
         '''
         This method should be overided by the designer of strategy on an instance level
@@ -179,8 +185,9 @@ class Strategy(BackTester):
         Should be executed before market open every virtual week on the day specified (or Mon as default)
         If date specified is not a trading date, then find the next nearest trading date
         '''
-        pass
-        
+        raise NotImplementedError
+    
+    @abstractclassmethod
     def run_monthly(self):
         '''
         This method should be overided by the designer of strategy on an instance level
@@ -188,4 +195,4 @@ class Strategy(BackTester):
         Should be executed before market open every virtual month on the day specified (or 1st as default)
         If date specified is not a trading date, then find the next nearest trading date
         '''
-        pass
+        raise NotImplementedError
