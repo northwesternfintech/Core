@@ -6,11 +6,17 @@ Create 4 Websockets from scratch, the simple API algo, and a simple queue tester
 
 ## Assignments:
 Ariana - Binance_Websocket.py
+
 Brennan - AWS3 wrapper function that saves big crypto .csv files
+
 Louis - Simple API Algo that queries data from CoinAPI
+
 Lucy - Gemini_Websocket.py
+
 Sam - Kucoin_Websocket.py
+
 Yetayal - Kraken Websocket.py
+
 Jay - Write out main_script.py
 
 ## Websocket Steps:
