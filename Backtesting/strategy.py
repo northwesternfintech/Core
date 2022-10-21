@@ -1,0 +1,198 @@
+from abc import ABC, abstractclassmethod
+
+import matplotlib
+import pandas as pd
+import holidays
+import datetime
+from portfolio import Portfolio
+
+
+class BackTester:
+    def __init__(self, data_file_path=None):
+        # init a backtester, retrieve data from local file
+        # data are stored as a pd dataframe that has the following cols
+        # date; open; high; low; close; volume; Name 
+        # TODO: Validate csv format
+        self._data_file_path = data_file_path or 'data/2013-2018.csv'
+        self.data = pd.read_csv(self._data_file_path)
+
+
+class Strategy(ABC, BackTester):  # TODO: Not sure why this originally inherits from BackTester if we don't use anything from it. Is BackTester supposed to be a parent class or a wrapper?
+    def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None): 
+        '''
+        transaction_cost: float that determines the cost of every transaction
+        start_balance: the balance that the strategy is starting with
+        
+        week_day:   every week, when it comes to the week_day specified, execute
+                    the run_weekly function. Default is Monday.
+        month_day:  every month, when it comes to the month_day specified, execute
+                    the run_monthly function. Default is 1st.
+            Note:   if date specified is not a trading date, execute the functions on 
+                    the next nearest trading date
+        '''
+        self.start_balance = start_balance # benchmark for visualization
+        self.portfolio = Portfolio(starting_balance = start_balance, 
+                                   transaction_cost = transaction_cost)
+        self.current_date = None    # datetime object for tracking the date in backtesting
+        self.open_close = None      # a boolean for tracking if it's currently market open/close
+                                    # True for open and False for close
+        self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
+    
+    def back_testing(self, start_time=None, end_time=None):
+        '''
+        back_testing takes in the start and end time, then proceed to 
+        test the performance of the strategy
+        
+        start_time, end_time: strings in the format of "yyyy-mm-dd"
+        '''
+        start = start_time or '2013-03-28'
+        end = end_time or '2018-02-05'
+
+        self.current_time = datetime.strptime(start, "%Y-%m-%d").date()
+        end_time = datetime.strptime(end, "%Y-%m-%d").date()
+        
+        print('\n started backtesting')
+        while self.current_time != end_time:
+            pass
+        print('\n finished backtesting, started visualizing')
+        
+        self.visualize()
+    
+    def log(self, msg, time): 
+        '''
+        This function logs every action that the strategy has taken, from
+        stock selection to buying/selling a stock
+        The logs should be display alongside the curves and visualizing
+        
+        msg: a string that describes the action to be logged
+        time: the time that the action took place
+        '''
+        self.log.append([msg, time]) # probs a good place to use numpy or pandas for performance
+    
+    def visualize(self): 
+        '''
+        This function should be executed after backtesting for visualizing the 
+        performance of the strategy
+        Use matplotlibe/seaborn/etc. to make graphs, then display the logs by the 
+        side, gotta make this look fancy
+        '''
+        pass
+
+    def is_trading_date(self, date):
+        '''
+        Verify if the given date is a trading day, return boolean
+        Should only be called by back_testing()
+        
+        date: datetime object
+        '''
+        return date not in self.nyse_holidays # checking if date exists in holiday dict
+    
+    def next_nearest_trading_date(self, date):
+        '''
+        Return the next nearest trading date as a datetime object
+        Should only be called by back_testing()
+        
+        date: datetime object
+        '''
+        while not self.is_trading_date(date): # check if current date is trading date
+            date+= datetime.timedelta(days=1) # move onto next date
+        
+        return date
+    
+    def handle_run_daily(self):
+        '''
+        handler for run_daily, to be called in back_testing()
+        '''
+        pass
+    
+    def handle_run_weekly(self):
+        '''
+        handler for run_weekly, to be called in back_testing()
+        '''
+        pass
+    
+    def handle_run_monthly(self):
+        '''
+        handler for run_monthly, to be called in back_testing()
+        '''
+        pass
+
+    def place_order(self, stock_name, shares):
+        '''
+        handler for buy/sell, set shares > 0 for buy and < 0 for sell
+        this function should be called by users in the followed functions only
+
+        stock_name: string
+        shares: float
+        '''
+        stock_price = self.data['date'==self.current_date & 'Name'==stock_name]
+        if self.current_time: 
+            stock_price = stock_price['open']
+        else:
+            stock_price = stock_price['close']
+        self.portfolio.place_order(stock_name, stock_price, shares)
+
+        
+    ################################################################################
+    # below are methods that the designer of strategy should override
+    # developlers shouldn't modified anything below this line
+    ################################################################################
+    '''
+    Important Note to Users:
+
+                    Since we only have open/close data at the moment, 
+                    we can only place at-the-open/at-the-close orders.
+                    Users should place the orders in the corresponding
+                    functions below.
+
+    '''
+    ################################################################################
+
+    @abstractclassmethod
+    def on_market_close(self):
+        '''
+        This method should be overided by the designer of strategy on an instance level
+        with python's type package
+        Should be executed before market close everyday
+        '''
+        # should be used for placing at-the-close orders and stock selection
+        raise NotImplementedError
+
+    @abstractclassmethod
+    def on_market_open(self):
+        '''
+        This method should be overided by the designer of strategy on an instance level
+        with python's type package
+        Should be executed before market open every virtual day
+        '''
+        # should be used for placing at-the-close orders and stock selection
+        raise NotImplementedError
+    
+    @abstractclassmethod
+    def run_daily(self):
+        '''
+        This method should be overided by the designer of strategy on an instance level
+        with python's type package
+        Should be executed before market open every virtual day
+        '''
+        raise NotImplementedError
+    
+    @abstractclassmethod
+    def run_weekly(self):
+        '''
+        This method should be overided by the designer of strategy on an instance level
+        with python's type package
+        Should be executed before market open every virtual week on the day specified (or Mon as default)
+        If date specified is not a trading date, then find the next nearest trading date
+        '''
+        raise NotImplementedError
+    
+    @abstractclassmethod
+    def run_monthly(self):
+        '''
+        This method should be overided by the designer of strategy on an instance level
+        with python's type package
+        Should be executed before market open every virtual month on the day specified (or 1st as default)
+        If date specified is not a trading date, then find the next nearest trading date
+        '''
+        raise NotImplementedError
