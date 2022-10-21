@@ -1,33 +1,54 @@
 import asyncio
-import websockets
-import Websocket_Class as ws
-import requests
+import json
 import multiprocessing
 import time
-import json
-import pandas as pd
 import traceback
+from datetime import datetime
 from time import time
-from datetime import datetime 
-from scipy.fft import idst 
 from uuid import uuid4
 
+import pandas as pd
+import requests
+import websockets
+from scipy.fft import idst
+
+from web_socket import WebSocket
+
+
 # Build Coinbase Websocket Class 
-class Coinbase_Websocket(ws.Websocket):
-    # Passing queue_1, queue_2, coins, setting subscription message and channels to subscribe to
+class CoinbaseWebSocket(WebSocket):
     def __init__(self, queue_1, queue_2, coins):
-        ws.Websocket.__init__(self, queue_1, queue_2, coins)
+        """Passing queue_1, queue_2, coins, setting subscription message and channels to subscribe to
+
+        Parameters
+        ----------
+        queue_1 : _type_
+            _description_
+        queue_2 : _type_
+            _description_
+        coins : _type_
+            _description_
+        """        
+        super().__init__(self, queue_1, queue_2, coins)
         self.channels = ['ticker', 'level2']
         self.sub_message = self.on_open()
    
-    def on_open(self): # Generates a subscribe message to be converted into json to be sent to endpoint
-        subscribe_message = {}
-        subscribe_message["type"] = "subscribe"
-        subscribe_message["product_ids"] = self.coins
-        subscribe_message["channels"] = self.channels
+    def on_open(self):
+        """Generates a subscribe message to be converted into json to be sent to endpoint
+
+        Returns
+        -------
+        _type_
+            _description_
+        """        
+        subscribe_message = {
+            "type": "subscribe",
+            "product_ids": self.coins,
+            "channels": self.channels
+        }
         return subscribe_message
     
-    async def run(self): # Full Asynchronous Run 
+    async def _run(self):  # Full Asynchronous Run 
         try:
             async with websockets.connect('wss://ws-feed.exchange.coinbase.com', max_size = 1_000_000_000) as websocket:
                 await websocket.send(json.dumps(self.sub_message))
@@ -50,7 +71,7 @@ class Coinbase_Websocket(ws.Websocket):
                         if self.queue_1.full():
                             print('working 1')
                         if msg_data != [] and time_id != []:
-                            df = pd.DataFrame(data = msg_data, index = time_id)
+                            df = pd.DataFrame(data=msg_data, index=time_id)
                             print(df)
                             self.queue_1.put(df) 
                     # If market 2 data
@@ -68,31 +89,22 @@ class Coinbase_Websocket(ws.Websocket):
                         if self.queue_2.full():
                             print('working 2')
                         if msg_data != [] and time_id != []:
-                            df = pd.DataFrame(data = msg_data, index = time_id)
+                            df = pd.DataFrame(data=msg_data, index=time_id)
                             print(df)
                             self.queue_2.put(df) 
-
-
         except Exception:
-            import traceback
             print(traceback.format_exc())
-
-    async def _main(self):
-        await self.run()
-
-    def _run_(self):
-        asyncio.run(self._main())
         
 
 # Async Script Start
 async def main(coins): 
     q = multiprocessing.Queue()
     r = multiprocessing.Queue()
-    cwr = Coinbase_Websocket(q, r, coins)
-    await cwr.run()
+    cwr = CoinbaseWebSocket(q, r, coins)
+    await cwr._run()  # TODO: Don't access private methods
 
 q = multiprocessing.Queue()
 r = multiprocessing.Queue()
 coins = ['BTC-USDT', 'ETH-USDT']
-cwr = Coinbase_Websocket(q, r,coins)
-cwr._run_()
+cwr = CoinbaseWebSocket(q, r,coins)
+cwr.run()
