@@ -10,18 +10,10 @@ CCXT Documentation can be found here: [CCXT Documentation](https://docs.ccxt.com
 4. Make sure orders interops with the queue properly if an order fails (Guessing we need to build another queue with all failed orders)
 
 ### Steps
-1. Include functions for every interaction listed under the Private API section in the CCXT documentation 
-    - manage personal account info
-    - query account balances
-    - trade by making market and limit orders
-    - create deposit addresses and fund accounts
-    - request withdrawal of fiat and crypto funds
-    - query personal open / closed orders
-    - query positions in margin/leverage trading
-    - get ledger history
-    - transfer funds between accounts
+1. Include functions for interactions listed under the Unified/Private API section in the CCXT documentation:
+
    
-**Some of the necessary functions (More in documentation)**
+**FUNCTIONS NEEDED**
 - fetchBalance (): Fetch Balance.
 - createOrder (symbol, type, side, amount[, price[, params]])
 - createLimitBuyOrder (symbol, amount, price[, params])
@@ -37,6 +29,13 @@ CCXT Documentation can be found here: [CCXT Documentation](https://docs.ccxt.com
 - fetchMyTrades ([symbol[, since[, limit[, params]]]])
 - editOrder (id, symbol, type, side, amount, price = undefined, params = {})
 - cancelOrder (id, symbol = undefined, params = {})
+- fetchStatus ([, params = {}])
+
+2. Need to find a way to log every action made with a time stamp and any relevant info. This will be sent to the Data Framework team.
+- Just convert the inputs into a csv. return this data
+- if any api call fails, need to make sure the order gets put back into the order queue correctly
+
+3. Create an order queue? to save all performed orders in the order they were submitted.
 
 ### Best Practices
 1. Write documentation!!!
