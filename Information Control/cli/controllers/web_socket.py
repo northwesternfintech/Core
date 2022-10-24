@@ -37,8 +37,6 @@ class WebSocketController(cement.Controller):
         if self.app.pargs.start_all and self.app.pargs.websocket_names:
             raise ValueError("Conflicting websockets to start")
 
-        print(self.app.pargs)
-
         # TODO
 
         # Validate inputted names
