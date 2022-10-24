@@ -3,11 +3,15 @@ class portfolio():
     def __init__(self, starting_balance=None, transaction_cost=None):
         
         self.balance = starting_balance or 10000
-        self.transaction_cost = transaction_cost or 0
+        self.transaction_cost = transaction_cost or 0 # decimal percentage
         self.transactions = []
         self.holdings = [] # list of lists
                            # each sublist contains two elements: [stock_name, amount_holding]
-
+                           # consider changing self.holdings to dictionary bc repeated access to same element would not be itme efficient
+                           # win rate would require calculation of avg cost of each stock
+                           # 2 suggestions:
+                           # to store number of shares and their avg price (only) -> dictionary (stock_name: [number, avg_price]
+                           # to store multiple fields (expandable in the future) -> dataframe
     def get_balance(self): return self.balance
     
     def get_holdings(self): return self.holdings

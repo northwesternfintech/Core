@@ -30,11 +30,13 @@ class Strategy(BackTester):
         self.start_balance = start_balance # benchmark for visualization
         self.portfolio = portfolio.portfolio(starting_balance = start_balance, 
                                    transaction_cost = transaction_cost)
-        self.current_date = None    # datetime object for tracking the date in backtesting
+        self.current_time = None    # datetime object for tracking the date in backtesting
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
-    
+        self.total_daily_assets = [] # list of total assets in a given day / index maps to index of self.dates
+        self.dates = [] # list of dates / index maps to index of self.total_daily_assets
+
     def back_testing(self, start_time=None, end_time=None):
         '''
         back_testing takes in the start and end time, then proceed to 
@@ -51,6 +53,14 @@ class Strategy(BackTester):
         print('\n started backtesting')
         while self.current_time != end_time:
             pass
+
+            # Run daily/weekly/monthly
+            
+            # append total amount of assets to self.total_daily_assets
+            
+            # increment self.curr_time
+            
+
         print('\n finished backtesting, started visualizing')
         
         self.visualize()
@@ -73,7 +83,29 @@ class Strategy(BackTester):
         Use matplotlibe/seaborn/etc. to make graphs, then display the logs by the 
         side, gotta make this look fancy
         '''
+        # plot self.total_daily_assets vs self.dates with plt
+
         pass
+
+    def update_testing_data(self):
+        self.total_daily_assets.append(self.total_assets())
+        self.dates.append(self.current_time)
+        
+
+    def total_assets(self):
+        '''
+        calculate the total amount of assets in a portfolio at the 
+        '''
+        total_output = 0
+        balance = self.portfolio.get_balance()
+        holdings = self.portfolio.get_holdings()
+        data = self.data
+        for h in holdings:
+            str_date = self.current_time.strf("%Y-%m-%d")
+            partial_data = data[data['Name']==h[0] and data['date']==str_date]
+            price = float(partial_data['open'])
+            total_output += h[1] * price
+        return total_output + balance
 
     def is_trading_date(self, date):
         '''
