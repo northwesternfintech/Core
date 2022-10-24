@@ -1,5 +1,6 @@
 import matplotlib
 import pandas as pd
+import holidays
 import datetime
 import portfolio
 
@@ -27,11 +28,12 @@ class Strategy(BackTester):
                     the next nearest trading date
         '''
         self.start_balance = start_balance # benchmark for visualization
-        self.portfolio = portfolio(starting_balance = start_balance, 
+        self.portfolio = portfolio.portfolio(starting_balance = start_balance, 
                                    transaction_cost = transaction_cost)
         self.current_date = None    # datetime object for tracking the date in backtesting
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
+        self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
     
     def back_testing(self, start_time=None, end_time=None):
         '''
@@ -80,7 +82,7 @@ class Strategy(BackTester):
         
         date: datetime object
         '''
-        pass
+        return not date in self.nyse_holidays # checking if date exists in holiday dict
     
     def next_nearest_trading_date(self, date):
         '''
@@ -89,7 +91,10 @@ class Strategy(BackTester):
         
         date: datetime object
         '''
-        pass
+        while not self.is_trading_date(date): # check if current date is trading date
+            date+= datetime.timedelta(days=1) # move onto next date
+        
+        return date
     
     def handle_run_daily(self):
         '''
@@ -184,5 +189,3 @@ class Strategy(BackTester):
         If date specified is not a trading date, then find the next nearest trading date
         '''
         pass
-
-        
