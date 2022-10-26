@@ -100,3 +100,25 @@ Week 3: All Prod Lines done
 Week 4: All integration done, fire it up
 Week 1 of November: All strats backtested
 
+# Installation
+To install this project use the following command:
+```
+pip install -e .
+```
+
+When creating new folders, make sure to add an `__init__.py` file. Also add the package path to `setup.cfg` under the 'packages' section.
+
+To import classes/variables from other files, use [relative imports](https://realpython.com/absolute-vs-relative-python-imports/). Examples:
+```
+from .backtest import BacktestController # Importing from the same folder as backtest
+from ..execution_platform.portforlio import Portfolio # Importing from a subfolder in /Core/core
+```
+
+To run/test your files, add an entry into the 'console_scripts' section of `setup.py`
+in the format of `COMMAND_NAME = PATH.TO.FILE:FUNCTION_TO_RUN` and then run `COMMAND_NAME` 
+in your terminal.
+
+Also add any package dependencies into the 'install_requires' section of `setup.py`
+
+If you get any sort of import/module not found errors try `pip install -e .`
+
