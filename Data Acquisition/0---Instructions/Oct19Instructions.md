@@ -4,14 +4,16 @@ Create 4 Websockets from scratch, the simple API algo, and a simple queue tester
 
 ## Ideal Deadline: Oct 26 (please let me know if you have no time because if so we can schedule a work day in which we get free food)
 
+## Updated Deadline: Nov 2
+
 ## Assignments:
-Ariana - Binance_Websocket.py
+Eric - Binance_Websocket.py
 
 Brennan - AWS3 wrapper function that saves big crypto .csv files
 
-Louis - Simple API Algo that queries data from CoinAPI
+Me - Simple API Algo that queries data from CoinAPI
 
-Lucy - Gemini_Websocket.py
+(Tentative) Roger Yen - Gemini_Websocket.py
 
 Sam - Kucoin_Websocket.py
 
