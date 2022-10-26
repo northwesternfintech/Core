@@ -5,7 +5,12 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Queue
 
 from .web_socket_manager import WebSocketManger
+from .backtest_manager import BacktestManager
 
+# TODO: May need to implement a pub sub model for data if multiple backtests using the 
+# same stream. If we switch to containers for running backtest maybe we use rabbitmq/kafka
+
+# https://stackoverflow.com/questions/31267366/how-can-i-implement-a-pub-sub-pattern-using-multiprocessing
 
 class Manager:
     """Manages the startup/operation/teardown of other core services
