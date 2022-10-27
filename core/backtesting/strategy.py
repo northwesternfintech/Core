@@ -73,10 +73,10 @@ class Strategy(BackTester):
             # Run daily/weekly/monthly
             
             # append total amount of assets to self.total_daily_assets_open
-             # append total amount of assets to self.total_daily_assets_close
+            # append total amount of assets to self.total_daily_assets_close
 
             
-            # increment self.curr_time
+            # Increment self.curr_time
             
         # Calculate statistical data
 
@@ -95,14 +95,24 @@ class Strategy(BackTester):
         '''
         self.log.append([msg, time])
     
-    def visualize(self): 
+    def visualize(self, plot_total_assets=True, plot_daily_returns=True, plot_win_rate=True): 
         '''
         This function should be executed after backtesting for visualizing the 
         performance of the strategy
         Use matplotlibe/seaborn/etc. to make graphs, then display the logs by the 
         side, gotta make this look fancy
+
+        Boolean parameters gives user control over which variables to display
         '''
-        # plot self.total_daily_assets vs self.dates with plt
+
+        if(plot_total_assets):
+            # plot self.total_daily_assets vs self.dates with plt
+            pass
+        if(plot_daily_returns):
+            # plot self.daily_gain_loss vs self.dates with plt
+            pass
+
+        # ...
 
         pass
 
@@ -111,11 +121,18 @@ class Strategy(BackTester):
         Updates the testing data for information that cannot be gathered after
         backtesting is completed
         '''
-        self.total_daily_assets.append(self.total_assets())
-        self.dates.append(self.current_time)
-        
+        self.total_daily_assets_open.append(self.calculate_total_assets(data_column='open'))
+        self.total_daily_assets_close.append(self.calculate_total_assets(data_column='close'))
 
-    def total_assets(self, data_column='open'):
+        self.dates.append(self.current_time)
+
+    def get_total_assets(self): return [self.total_daily_assets_open, self.total_daily_assets_close]
+
+    def get_daily_gain_loss(self): return self.daily_gain_loss
+
+    def get_win_rate(self): return [self.win_rate, self.winning_action, self.total_action]
+
+    def calculate_total_assets(self, data_column='open'):
         '''
         calculate the total amount of assets in a portfolio at the selected time each
         day.
@@ -134,7 +151,7 @@ class Strategy(BackTester):
             total_output += h[1] * price
 
         return total_output + balance
-
+    
     def calculate_daily_gain_loss(self):
         '''
         Calculate the daily gain/loss based from open-close

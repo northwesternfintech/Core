@@ -1,10 +1,16 @@
 class asset():
 
     def __init__(self, asset_name):
+        '''
+        Asset Object contains the fields storing the information to be stored
+        about each individual stock/asset the portfolio holds
+        
+        asset_name: String that holds the name of the object
+        '''
 
         self.name = asset_name
-        self.amount = 0
-        self.average_price = 0
+        self.amount = 0 # Stores the amount of asset
+        self.average_price = 0 # Stores the average price of the asset
 
     def get_name(self): return self.name
 
@@ -16,6 +22,8 @@ class asset():
         '''
         This function updates the asset whenever a buy/sell order
         order is completed.
+
+        When amount < 0 and price = 0, this indicates a sell order
         '''
 
         curr_average_weight = self.get_average_price() * self.get_amount() 
