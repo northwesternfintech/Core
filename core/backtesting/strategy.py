@@ -34,7 +34,23 @@ class Strategy(BackTester):
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
-        self.total_daily_assets = [] # list of total assets in a given day / index maps to index of self.dates
+
+        ###
+        ### Parameters for storing statistical data for strategy
+        ###
+
+        self.winning_action = 0
+        self.total_action = 0
+
+        self.win_rate = 0
+
+        # list of total assets in a given day at open/open
+        # index maps to index of self.dates
+        self.total_daily_assets_open = [] 
+        self.total_daily_assets_close = []
+
+        self.daily_gain_loss = [] # List of daily gain/loss indexed to self.dates
+
         self.dates = [] # list of dates / index maps to index of self.total_daily_assets
 
     def back_testing(self, start_time=None, end_time=None):
@@ -56,10 +72,13 @@ class Strategy(BackTester):
 
             # Run daily/weekly/monthly
             
-            # append total amount of assets to self.total_daily_assets
+            # append total amount of assets to self.total_daily_assets_open
+             # append total amount of assets to self.total_daily_assets_close
+
             
             # increment self.curr_time
             
+        # Calculate statistical data
 
         print('\n finished backtesting, started visualizing')
         
@@ -88,24 +107,70 @@ class Strategy(BackTester):
         pass
 
     def update_testing_data(self):
+        '''
+        Updates the testing data for information that cannot be gathered after
+        backtesting is completed
+        '''
         self.total_daily_assets.append(self.total_assets())
         self.dates.append(self.current_time)
         
 
-    def total_assets(self):
+    def total_assets(self, data_column='open'):
         '''
-        calculate the total amount of assets in a portfolio at the 
+        calculate the total amount of assets in a portfolio at the selected time each
+        day.
+
+        Should be run during backtesting for each iteration.
         '''
         total_output = 0
         balance = self.portfolio.get_balance()
         holdings = self.portfolio.get_holdings()
         data = self.data
+
         for h in holdings:
             str_date = self.current_time.strf("%Y-%m-%d")
             partial_data = data[data['Name']==h[0] and data['date']==str_date]
-            price = float(partial_data['open'])
+            price = float(partial_data[data_column])
             total_output += h[1] * price
+
         return total_output + balance
+
+    def calculate_daily_gain_loss(self):
+        '''
+        Calculate the daily gain/loss based from open-close
+        '''
+
+        for i in range(len(self.total_daily_assets_open)):
+
+            day_open = self.total_daily_assets_open[i]
+            day_close = self.total_daily_assets_close[i]
+
+            self.daily_gain_loss[i] = (day_close - day_open) / day_open
+
+        return
+
+    def calculate_win_rate(self):
+        '''
+        Calculate and store count for total actions, winning actions, and win rate
+        '''
+
+        total_action_count = 0
+        winning_action_count = 0
+        
+        transactions = self.portfolio.transactions
+        for t in transactions:
+            if t[0] == 'sell':
+                total_action_count += 1
+                if t[4] > 0:
+                    winning_action_count += 1
+        
+        self.total_action = total_action_count
+        self.winnning_action = winning_action_count
+
+        self.win_rate = winning_action_count / total_action_count
+
+        return
+
 
     def is_trading_date(self, date):
         '''
