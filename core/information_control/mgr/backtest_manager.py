@@ -6,24 +6,17 @@ from .status import BacktestStatus
 class BacktestManager:
     """Manages the startup/status/shutdown of backtests.
     """
-    def __init__(self, queues: Dict, process_pool,
-                 status_dict: Dict[str, BacktestStatus]):
+    def __init__(self, 
+                 manager: 'Manager'):
         """Creates a new BacktestManager. Freeing resources is the 
         responsibility of the Manager class.
 
         Parameters
         ----------
-        queues : Dict[str, multiprocessing.Queue]
-            Dictionary mapping the names of active web sockets to the 
-            queues containing their data
-        process_pool : concurrent.futures.ProcessPoolExecutor
-            Executor to utilize to start websockets
-        status_dict : Dict[str, BacktestStatus]
-            Dictionary mapping the names of backtests to their status
+        manager : Manager
+            Instance of parent Manager
         """
-        self._queues = queues
-        self._process_pool = process_pool
-        self._status_dict = status_dict
+        self._manager = manager
 
     def start(self, backtests_to_start: List[str]) -> Optional[ValueError]:
         """Takes a list of backtest names and starts the appropriate 
@@ -66,7 +59,7 @@ class BacktestManager:
             Returns ValueError if invalid input or returns status
         """
         # Validate web socket name
-        return self._status_dict[backtest_name].value
+        return self._manager._status_dict[backtest_name].value
 
     @staticmethod
     def _run_process(backtest_to_start: str, queues, status_dict) -> None:

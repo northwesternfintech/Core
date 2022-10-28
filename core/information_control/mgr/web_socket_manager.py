@@ -3,28 +3,23 @@ from typing import Dict, List, Optional, Union
 from .status import WebSocketStatus
 
 
-class WebSocketManger:
+class WebSocketManager:
     """Manages the startup/status/shutdown of web sockets.
     """
-    def __init__(self, queues: Dict, process_pool,
-                 status_dict: Dict[str, WebSocketStatus],
+    def __init__(self,
+                 manager: 'Manager',
                  sockets_per_thread=2):
         """Creates a new WebSocketManager. Freeing resources is the 
         responsibility of the Manager class.
 
         Parameters
         ----------
-        queues : Dict[str, multiprocessing.Queue]
-            Dictionary mapping the names of active web sockets to the 
-            queues containing their data
-        process_pool : concurrent.futures.ProcessPoolExecutor
-            Executor to utilize to start websockets
+        manager : Manager
+            Instance of parent Manager
         status_dict : Dict[str, WebSocketStatus]
             Dictionary mapping the names of web sockets to their status
         """
-        self._queues = queues
-        self._process_pool = process_pool
-        self._status_dict = status_dict
+        self._manager = manager
         self._sockets_per_thread = sockets_per_thread
         self._async_tasks: Dict[str] = {}  # Maps web socket name to async task
 
@@ -78,7 +73,7 @@ class WebSocketManger:
         pass
 
     def status(self, socket_name: str) -> Union[str, ValueError]:
-        """Takes name of web socket and returnt the operational status.
+        """Takes name of web socket and returns the operational status.
 
         Returns (not raises) error if given invalid web socket name.
 
@@ -93,7 +88,7 @@ class WebSocketManger:
             Returns ValueError if invalid input or returns status
         """
         # Validate web socket name
-        return self._status_dict[socket_name].value
+        return self._manager._status_dict[socket_name].value
 
     @staticmethod
     def _run_process(sockets_to_start: List[str], queues, status_dict,

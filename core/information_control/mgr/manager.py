@@ -4,13 +4,15 @@ from typing import Optional, Dict
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Queue
 
-from .web_socket_manager import WebSocketManger
+from .web_socket_manager import WebSocketManager
 from .backtest_manager import BacktestManager
 
 # TODO: May need to implement a pub sub model for data if multiple backtests using the 
 # same stream. If we switch to containers for running backtest maybe we use rabbitmq/kafka
 
 # https://stackoverflow.com/questions/31267366/how-can-i-implement-a-pub-sub-pattern-using-multiprocessing
+
+__all__ = ('Manager',)
 
 class Manager:
     """Manages the startup/operation/teardown of other core services
@@ -34,14 +36,26 @@ class Manager:
 
         self._queue_dict: Dict[Queue] = {}
         self._worker_pool: ProcessPoolExecutor = ProcessPoolExecutor()  # TODO
-        self._web_socket_manager = None # TODO
+        self._web_socket_manager = WebSocketManager(self) # TODO
+        self._backtest_manager = BacktestManager(self)
 
     def shutdown(self):
         """Deallocates all necessary resources"""
         if self._worker_pool:
             self._worker_pool.shutdown(wait=False)
 
+    @property
+    def web_sockets(self) -> WebSocketManager:
+        """Provides access to web sockets"""
+        return self._web_socket_manager
+
+    @property
+    def backtest(self) -> BacktestManager:
+        """Provides access to backtest"""
+        return self._backtest_manager
+
 
 def main():
     manager = Manager()
     print(manager._web_socket_manager)
+    manager.shutdown()
