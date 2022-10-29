@@ -1,5 +1,4 @@
 import ccxt
-from dotenv import load_dotenv
 
 class executionPlatform():
   def __init__(self):
