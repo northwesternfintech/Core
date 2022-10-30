@@ -23,7 +23,7 @@ class WebSocketManager:
         self._sockets_per_thread = sockets_per_thread
         self._async_tasks: Dict[str] = {}  # Maps web socket name to async task
 
-    def start(self, sockets_to_start: List[str]) -> Optional[ValueError]:
+    def start(self, sockets_to_start: List[str], *args, **kwargs) -> Optional[ValueError]:
         """Takes a list of web socket names and starts the appropriate 
         web sockets in separate processes. There will be 
         self.sockets_per_thread sockets running in a single thread, and 

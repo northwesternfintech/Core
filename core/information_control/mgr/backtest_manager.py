@@ -18,7 +18,7 @@ class BacktestManager:
         """
         self._manager = manager
 
-    def start(self, backtests_to_start: List[str]) -> Optional[ValueError]:
+    def start(self, backtests_to_start: List[str], *args, **kwargs) -> Optional[ValueError]:
         """Takes a list of backtest names and starts the appropriate 
         backtests in separate processes. Each backtest will have its own 
         process.
