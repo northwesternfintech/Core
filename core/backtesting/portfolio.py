@@ -25,14 +25,13 @@ class portfolio():
         if shares > 0: # buy
             if self.balance >= stock_price*shares*(1+self.transaction_cost):
                 return True
-            else: 
-                return False
+
         else: # sell
-            
             if (self.holdings.has_key(stock_name)):
                 return self.holdings[stock_name].get_amount() >= abs(shares)
 
-            return False
+        # If both conditions fail, then order is invalid
+        return False
             
         
     def place_order(self, stock_name, stock_price, shares): 
@@ -54,6 +53,7 @@ class portfolio():
                     self.holdings[stock_name] = asset(stock_name)
 
                 self.holdings[stock_name].update_asset(amount=shares, price=stock_price)
+
                 return True
 
             elif shares < 0:
@@ -65,9 +65,10 @@ class portfolio():
                     self.holdings[stock_name] = asset(stock_name)
 
                 self.holdings[stock_name].update_asset(amount=shares, price=0)
+
                 return True
                 
-        else: return False 
+        return False 
             
             
                     
