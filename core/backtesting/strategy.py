@@ -34,7 +34,23 @@ class Strategy(BackTester):
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
-        self.total_daily_assets = [] # list of total assets in a given day / index maps to index of self.dates
+
+        ###
+        ### Parameters for storing statistical data for strategy
+        ###
+
+        self.winning_action = 0
+        self.total_action = 0
+
+        self.win_rate = 0
+
+        # list of total assets in a given day at open/open
+        # index maps to index of self.dates
+        self.total_daily_assets_open = [] 
+        self.total_daily_assets_close = []
+
+        self.daily_gain_loss = [] # List of daily gain/loss indexed to self.dates
+
         self.dates = [] # list of dates / index maps to index of self.total_daily_assets
 
     def back_testing(self, start_time=None, end_time=None):
@@ -56,10 +72,13 @@ class Strategy(BackTester):
 
             # Run daily/weekly/monthly
             
-            # append total amount of assets to self.total_daily_assets
+            # append total amount of assets to self.total_daily_assets_open
+            # append total amount of assets to self.total_daily_assets_close
+
             
-            # increment self.curr_time
+            # Increment self.curr_time
             
+        # Calculate statistical data
 
         print('\n finished backtesting, started visualizing')
         
@@ -76,36 +95,114 @@ class Strategy(BackTester):
         '''
         self.log.append([msg, time])
     
-    def visualize(self): 
+    def visualize(self, plot_total_assets=True, plot_daily_returns=True, plot_win_rate=True): 
         '''
         This function should be executed after backtesting for visualizing the 
         performance of the strategy
         Use matplotlibe/seaborn/etc. to make graphs, then display the logs by the 
         side, gotta make this look fancy
+
+        Boolean parameters gives user control over which variables to display
+
+        plot_total_assets: a boolean that indicates whether total_assets should be displayed
+        plot_daily_returns: a boolean that indicates whether daily_returns should be displayed
+        plot_win_rate: a boolean that indicates whether daily returns should be displayed
         '''
-        # plot self.total_daily_assets vs self.dates with plt
+
+        if(plot_total_assets):
+            # plot self.total_daily_assets vs self.dates with plt
+            pass
+        if(plot_daily_returns):
+            # plot self.daily_gain_loss vs self.dates with plt
+            pass
+
+        # ...
 
         pass
 
     def update_testing_data(self):
-        self.total_daily_assets.append(self.total_assets())
-        self.dates.append(self.current_time)
-        
+        '''
+        Updates the testing data for information that cannot be gathered after
+        backtesting is completed
+        '''
+        self.total_daily_assets_open.append(self.calculate_total_assets(data_column='open'))
+        self.total_daily_assets_close.append(self.calculate_total_assets(data_column='close'))
 
-    def total_assets(self):
+        self.dates.append(self.current_time)
+
+    def get_total_assets(self): return [self.total_daily_assets_open, self.total_daily_assets_close]
+
+    def get_daily_gain_loss(self): return self.daily_gain_loss
+
+    def get_win_rate(self): return [self.win_rate, self.winning_action, self.total_action]
+
+    def calculate_total_assets(self, data_column='open'):
         '''
-        calculate the total amount of assets in a portfolio at the 
+        calculate the total amount of assets in a portfolio at the selected time each
+        day.
+
+        Should be run during backtesting for each iteration.
+
+        data_column: a string that describes which column the data is from
         '''
-        total_output = 0
-        balance = self.portfolio.get_balance()
-        holdings = self.portfolio.get_holdings()
-        data = self.data
+        total_holdings = 0 # running sum of total sum of assets in holdings
+        balance = self.portfolio.get_balance() # current balance of the portfolio
+        holdings = self.portfolio.get_holdings() # current holdings of the portfolio
+        
+        data = self.data # pandas dataframe of stock data
+
         for h in holdings:
+
+            # get the price of the holdings at the current date
             str_date = self.current_time.strf("%Y-%m-%d")
             partial_data = data[data['Name']==h[0] and data['date']==str_date]
-            price = float(partial_data['open'])
-            total_output += h[1] * price
-        return total_output + balance
+            curr_price = float(partial_data[data_column])
+
+            # increment the running sum of total by the number of holdings by the current price of holding
+            total_holdings += h[1] * curr_price
+
+        return total_holdings + balance # total assets is the sum of holdings and balance
+    
+    def calculate_daily_gain_loss(self):
+        '''
+        Calculate the daily gain/loss based from open-close (daily gain/loss = (close - open) / open)
+        '''
+
+        day_open = self.total_daily_assets_open
+        day_close = self.total_daily_assets_close
+
+        # Calculate the daily gain/loss for each day
+        for i in range(len(self.total_daily_assets_open)):
+            self.daily_gain_loss[i] = (day_close[i] - day_open[i]) / day_open[i]
+
+        return True
+
+    def calculate_win_rate(self):
+        '''
+        Calculate and store count for total actions, winning actions, and win rate
+        '''
+
+        total_action_count = 0 # Variable that keeps track of total actions undertaken by strategy
+        winning_action_count = 0 # Variables that keeps track of winning actions undertaken by strategy
+        
+        transactions = self.portfolio.transactions
+
+        for t in transactions:
+            # Only 'sell' transactions can be considered for win/loss
+            if t[0] == 'sell': 
+                total_action_count += 1
+
+                # Check if transaction is profitable
+                if t[4] > 0:
+                    winning_action_count += 1
+        
+        self.total_action = total_action_count # Update the total_action parameter in strategy
+        self.winnning_action = winning_action_count # update the wining_action parameter in strategy
+
+        self.win_rate = winning_action_count / total_action_count # Update the win_rate parameter in strategy
+
+        return True
+
 
     def is_trading_date(self, date):
         '''
