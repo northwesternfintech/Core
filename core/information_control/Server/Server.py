@@ -51,16 +51,38 @@ class Server():
 
 
     def create_history(self, msg, success, now):
-        pass
+        history_max = 100 # might want to make this changeable from CLI
+        self.history_append((msg, success, now))
+
+        while len(self.history) > history_max:
+            self.history.pop(0)
 
 
     def ping(self):
-        pass
+        try:
+            output = subprocess.check_output("ping -{} 1 {}".format('n' if platform.system().lower() == "windows" else 'c', self.name ), shell=True, universal_newlines=True)
+
+            if 'unreachable' in output:
+                return False
+            else:
+                return True
+            
+        except Exception:
+            return False
 
 
 if __name__ == "__main__":
-    pass
+    try:
+        servers = pickle.load(open("servers.pickle", "rb"))
+    except:
+        servers = [] # NEED SERVER INFO
+    
+    for server in servers:
+        server.check_connection()
+        print(len(server.history))
+        print(server.history[-1])
 
+    pickle.dump(servers, open("servers.pickle", "wb"))
 
     
 
