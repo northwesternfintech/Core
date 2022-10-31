@@ -52,7 +52,7 @@ class Server():
 
     def create_history(self, msg, success, now):
         history_max = 100 # might want to make this changeable from CLI
-        self.history_append((msg, success, now))
+        self.history.append((msg, success, now))
 
         while len(self.history) > history_max:
             self.history.pop(0)
@@ -72,10 +72,15 @@ class Server():
 
 
 if __name__ == "__main__":
-    try:
-        servers = pickle.load(open("servers.pickle", "rb"))
-    except:
-        servers = [] # NEED SERVER INFO
+    # try:
+    #     servers = pickle.load(open("servers.pickle", "rb"))
+    #     print(servers)
+    #     print("hello")
+    # except:
+    servers = [
+            Server("fintechclub.ece.northwestern.edu", 80, "plain", "high") 
+            ] # NEED SERVER INFO
+        
     
     for server in servers:
         server.check_connection()
