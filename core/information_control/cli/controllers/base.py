@@ -2,9 +2,7 @@ import cement
 
 # TODO: Make ascii art banner
 BANNER = """
-
 NUFT
-
 An interactive platform for using NUFT Core
 Docs:
 """
