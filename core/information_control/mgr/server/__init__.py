@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 
-from ..mgr.manager import Manager
+from ..manager import Manager
 
 app = Flask(__name__)
 
@@ -168,4 +168,5 @@ def backtest_status(web_socket_name):
 
 
 def main():
+    app.run(threaded=False)
     print("hello world")
