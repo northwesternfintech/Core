@@ -34,7 +34,9 @@ class Strategy(BackTester):
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
-    
+        self.week_day = week_day
+        self.month_day = month_day
+
     def back_testing(self, start_time=None, end_time=None):
         '''
         back_testing takes in the start and end time, then proceed to 
