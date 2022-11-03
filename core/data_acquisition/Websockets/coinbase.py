@@ -72,26 +72,27 @@ class CoinbaseWebSocket(WebSocket):
                             print('working 1')
                         if msg_data != [] and time_id != []:
                             df = pd.DataFrame(data=msg_data, index=time_id)
-                            print(df)
+                            # print(df)
                             self.queue_1.put(df) 
                     # If market 2 data
                     elif temp_json['type'] == 'l2update':
                         curr_dt = temp_json['time'].replace('Z', '')
                         curr_dt = curr_dt.replace('T', ' ')
-                        msg_data = {
-                                'exchange': 'coinbase',
-                                'ticker': temp_json['product_id'],
-                                'side': temp_json['changes'][0][0],
-                                'price': temp_json['changes'][0][1],
-                                'quantity': temp_json['changes'][0][2]
-                            }
-                        time_id = [curr_dt]
-                        if self.queue_2.full():
-                            print('working 2')
-                        if msg_data != [] and time_id != []:
-                            df = pd.DataFrame(data=msg_data, index=time_id)
-                            print(df)
-                            self.queue_2.put(df) 
+                        for update in enumerate(temp_json['changes']):
+                            msg_data = {
+                                    'exchange': 'coinbase',
+                                    'ticker': temp_json['product_id'],
+                                    'side': update[0],
+                                    'price': update[1],
+                                    'quantity': update[2]
+                                }
+                            time_id = [curr_dt]
+                            if self.queue_2.full():
+                                print('working 2')
+                            if msg_data != [] and time_id != []:
+                                df = pd.DataFrame(data=msg_data, index=time_id)
+                                print(df)
+                                self.queue_2.put(df) 
         except Exception:
             print(traceback.format_exc())
         
