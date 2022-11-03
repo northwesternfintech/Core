@@ -10,6 +10,7 @@ from .status import WebSocketStatus
 from .coinbase import CoinbaseWebSocket
 
 import asyncio
+import psutil
 
 
 class WebSocketManager:
@@ -100,7 +101,7 @@ class WebSocketManager:
 
         return pid
 
-    def stop(self, pid) -> Optional[ValueError]:
+    def stop(self, pid: str) -> Optional[ValueError]:
         """Takes a list of web socket names and stops the appropriate 
         web sockets. Stopping web sockets should not affect any other 
         web sockets.
@@ -124,7 +125,13 @@ class WebSocketManager:
 
         os.kill(pid, signal.SIGTERM)
 
-    def status(self, socket_name: str) -> Union[str, ValueError]:
+        self._running_pids.remove(pid)
+        self._running_tickers -= self._pid_tickers[pid]
+        self._pid_tickers.pop(pid)
+        self._pid_status[pid] = WebSocketStatus.STOPPED
+
+
+    def status(self, pid: str) -> Union[str, ValueError]:
         """Takes name of web socket and returns the operational status.
 
         Returns (not raises) error if given invalid web socket name.
@@ -139,8 +146,35 @@ class WebSocketManager:
         Union[str, ValueError]
             Returns ValueError if invalid input or returns status
         """
-        # Validate web socket name
-        return self._manager._status_dict[socket_name].value
+        if pid not in self._pid_status:
+            raise ValueError(f"Unknown PID {pid}")
+
+        self._update_status()
+        return self._pid_status[pid]
+
+    def clear_status(self):
+        """
+        Removes all STOPPED or FAILED websockets
+        """
+        pid_to_clear = []
+        for pid, status in self._pid_status.items():
+            if status in [WebSocketStatus.STOPPED, WebSocketStatus.FAILED]:
+                pid_to_clear.append(pid)
+
+        for pid in pid_to_clear:
+            self._pid_status.pop(pid)
+
+
+    def _update_status(self):
+        """
+        Checks whether running web sockets are still operational
+        """
+        for pid in self._running_pids:
+            if not psutil.pid_exists(pid):
+                self._running_pids.remove(pid)
+                self._running_tickers -= self._pid_tickers[pid]
+                self._pid_tickers.pop(pid)
+                self._pid_status[pid] = WebSocketStatus.FAILED
 
 
 def main():

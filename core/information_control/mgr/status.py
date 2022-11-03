@@ -5,7 +5,7 @@ class WebSocketStatus(Enum):
     """Enumeration for web socket statuses"""
     WORKING = "working"
     FAILED = "failed"
-    NOT_RUNNING = "not running"
+    STOPPED = "stopped"
 
 
 class BacktestStatus(Enum):

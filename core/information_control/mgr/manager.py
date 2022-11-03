@@ -40,8 +40,8 @@ class Manager:
 
     def shutdown(self):
         """Deallocates all necessary resources"""
-        if self._worker_pool:
-            self._worker_pool.shutdown(wait=False)
+        for pid in self.web_sockets._running_pids:
+            self.web_sockets.stop(pid)
 
     @property
     def web_sockets(self) -> WebSocketManager:
@@ -60,4 +60,9 @@ def main():
     print(p)
     import time
     time.sleep(5)
+    print(w.web_sockets.status(p))
     w.web_sockets.stop(p)
+    print(w.web_sockets.status(p))
+    time.sleep(1)
+    w.web_sockets.clear_status()
+    print(w.web_sockets._pid_status)
