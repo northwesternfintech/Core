@@ -34,14 +34,14 @@ class WebSocket(ABC): # TODO: Decide whether its "websocket" or "web socket"
         raise NotImplementedError
 
     @abstractmethod
-    async def _run(self) -> None:
+    async def async_run(self) -> None:
         """
         Add all your async run junk here
         """
         raise NotImplementedError
 
-    async def _main(self):  # TODO: Not sure if this is needed add docstring for purpose
-        await self.run()
+    async def main(self):  # TODO: Not sure if this is needed add docstring for purpose
+        await self.async_run()
 
     def run(self):  # TODO: Add docstring for purpose
-        asyncio.run(self._main())
+        asyncio.run(self.main())

@@ -48,7 +48,7 @@ class CoinbaseWebSocket(WebSocket):
         }
         return subscribe_message
     
-    async def _run(self):  # Full Asynchronous Run 
+    async def async_run(self):  # Full Asynchronous Run 
         try:
             async with websockets.connect('wss://ws-feed.exchange.coinbase.com', max_size = 1_000_000_000) as websocket:
                 await websocket.send(json.dumps(self.sub_message))
@@ -101,7 +101,7 @@ async def main(coins):
     q = multiprocessing.Queue()
     r = multiprocessing.Queue()
     cwr = CoinbaseWebSocket(q, r, coins)
-    await cwr._run()  # TODO: Don't access private methods
+    await cwr.async_run()  # TODO: Don't access private methods
 
 q = multiprocessing.Queue()
 r = multiprocessing.Queue()
