@@ -1,8 +1,7 @@
 import os
 
 from typing import Optional, Dict
-from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import Queue
+import multiprocessing
 
 from .web_socket_manager import WebSocketManager
 from .backtest_manager import BacktestManager
@@ -34,7 +33,8 @@ class Manager:
 
         self._path = path
 
-        self._worker_pool: ProcessPoolExecutor = ProcessPoolExecutor()  # TODO
+        self._max_cores = multiprocessing.cpu_count()
+        self._cur_worker_count = 0
         self._web_socket_manager = WebSocketManager(self) # TODO
         self._backtest_manager = BacktestManager(self)
 
@@ -55,7 +55,9 @@ class Manager:
 
 
 def main():
-    manager = Manager()
-    print(manager._web_socket_manager)
-    print(manager.web_sockets.start(['BTC-USDT', 'ETH-USDT']))
-    manager.shutdown()
+    w = Manager()
+    p = w.web_sockets.start(["BTC-USDT"])
+    print(p)
+    import time
+    time.sleep(5)
+    w.web_sockets.stop(p)
