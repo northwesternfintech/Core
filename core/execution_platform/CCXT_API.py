@@ -1,11 +1,14 @@
 import ccxt
 from dotenv import load_dotenv
 
+
 class executionPlatform():
   def __init__(self):
     load_dotenv()
     self.mapToExchange = {}
 
+
+  '''createExchange() takes in the name of the exchange you want to use and creates an instance of it in the mapToExchange dictionary. Raises an exception if the exchange doesn't exist in CCXT.'''
   def createExchange(self, exchangeName):
     if exchangeName not in ccxt.exchanges:
       raise Exception("ERROR>>Exchange Doesn't Exist in CCXT!")
@@ -13,16 +16,17 @@ class executionPlatform():
     self.mapToExchange[exchangeName].secret = eval(exchangeName)[0]
     self.mapToExchange[exchangeName].apiKey = eval(exchangeName)[1]
 
+  '''getBalance() takes in the name of the exchange that you want to use and returns the current balance of the account.'''
   def getBalance(self, exchange:str):
     if exchange not in self.mapToExchange:
       raise Exception("ERROR>>Exchange Not Created!")
     else:
       try:
         return self.mapToExchange[exchange].fetchBalance()
-
       except Exception as e: 
         print(e)
 
+  '''placeOrder() takes in the exchange name, trading pair symbols, trade type, trade side, trade amount, and price (if limit order) and places an order on the exchange'''
   def placeOrder(self, exchange:str, tradeSymbol:str, tradeType:str, tradeSide:str, tradeAmount:int, price:float=None): #->return order ID
     if exchange not in self.mapToExchange:
       raise Exception("ERROR>>Exchange Not Created!")
@@ -38,6 +42,7 @@ class executionPlatform():
       except Exception as e: 
         print(e)
 
+  '''editOrder() takes in the exchange name, order ID, trading pair symbols, trade type, trade side, trade amount, and price (if limit order). It edits the corresponding order with these parameters. Returns an exception if failed.'''
   def editOrder(self, exchange:str, orderID:str, tradeSymbol:str, tradeType:str, tradeSide:str, tradeAmount:int, price:float=None):
     if exchange not in self.mapToExchange:
       raise Exception("ERROR>>Exchange Not Created!")
@@ -50,7 +55,18 @@ class executionPlatform():
       except Exception as e: 
         print(e)
 
-  def cancelOrder(self, exchange:str, tradingPair:str=None, orderID:list(str)=None):
+  '''inspectOrder() takes in the exchange name and order ID. It returns all of the order information in JSON format.'''
+  def inspectOrder(self, exchange:str, orderID=None):
+    if exchange not in self.mapToExchange:
+      raise Exception("ERROR>>Exchange Not Created!")
+    else:
+      try:
+        return self.mapToExchange[exchange].fetch_order(orderID)
+      except Exception as e: 
+        print(e)
+
+  '''cancelOrder() takes in the exchange name, orderID, and the trading pair symbols. It cancels the corresponding order. Returns an exception if failed.'''
+  def cancelOrder(self, exchange:str, orderID, tradingPair:str=None):
     if exchange == 'ALL':
       if tradingPair != None:
         for i in self.mapToExchange:
@@ -63,9 +79,10 @@ class executionPlatform():
         raise Exception("ERROR>>Exchange Not Created!")
       else:
         try:
-          if tradingPair != None:
-            self.mapToExchange[exchange].cancelOrder(orderID, tradingPair)
-          else:
             self.mapToExchange[exchange].cancelOrder(orderID)
         except Exception as e: 
           print(e)
+
+
+
+
