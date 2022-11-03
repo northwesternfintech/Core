@@ -34,7 +34,6 @@ class Manager:
 
         self._path = path
 
-        self._queue_dict: Dict[Queue] = {}
         self._worker_pool: ProcessPoolExecutor = ProcessPoolExecutor()  # TODO
         self._web_socket_manager = WebSocketManager(self) # TODO
         self._backtest_manager = BacktestManager(self)
@@ -58,4 +57,5 @@ class Manager:
 def main():
     manager = Manager()
     print(manager._web_socket_manager)
+    print(manager.web_sockets.start(['BTC-USDT', 'ETH-USDT']))
     manager.shutdown()

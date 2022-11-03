@@ -1,14 +1,34 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Set, Tuple
+import multiprocessing
+from uuid import uuid4
 
 from .status import WebSocketStatus
+from .coinbase import CoinbaseWebSocket
+
+import asyncio
 
 
 class WebSocketManager:
     """Manages the startup/status/shutdown of web sockets.
+
+    self._manager : Manager
+        Instance of parent Manager
+    self._running_pids : Set[str]
+        Set of UUIDs of running processes
+    self._running_tickers : Set[str]
+        Set of tickers currently being retrieved
+    self._pid_tickers : Dict[str, Set[str]]
+        Map of process UUIDs to set of tickers the process is running
+    self._pid_status : Dict[str, WebSocketStatus]
+        Map of process UUIDs to process status
+    self._async_tasks : Dict[str]
+        Map of process UUIDs to cancellable async routine
+    self._pid_queues : Dict[Tuple[Queue, Queue]]
+        Map of process UUIDs to a tuple containing the queues storing
+        market level 1 & 2 data
     """
     def __init__(self,
-                 manager: 'Manager',
-                 sockets_per_thread=2):
+                 manager: 'Manager'):
         """Creates a new WebSocketManager. Freeing resources is the 
         responsibility of the Manager class.
 
@@ -16,42 +36,70 @@ class WebSocketManager:
         ----------
         manager : Manager
             Instance of parent Manager
-        status_dict : Dict[str, WebSocketStatus]
-            Dictionary mapping the names of web sockets to their status
         """
         self._manager = manager
-        self._sockets_per_thread = sockets_per_thread
-        self._async_tasks: Dict[str] = {}  # Maps web socket name to async task
 
-    def start(self, sockets_to_start: List[str], *args, **kwargs) -> Optional[ValueError]:
-        """Takes a list of web socket names and starts the appropriate 
-        web sockets in separate processes. There will be 
-        self.sockets_per_thread sockets running in a single thread, and 
-        one thread running in each process.
+        self._running_pids: Set[str] = set()
+        self._running_tickers: Set[str] = set()
 
-        Returns (not raises) error if given duplicate web sockets, 
-        invalid web sockets, or web sockets that are already running.
+        self._pid_tickers: Dict[str, Set[str]] = {}
+        self._pid_status: Dict[str, WebSocketStatus] =  {}
+
+        self._pid_processes = {}
+        self._pid_queues: Dict[Tuple[Queue, Queue]] = {}
+
+    def start(self, tickers: List[str], *args, **kwargs) -> str:
+        """Takes a list of ticker names and starts a websocket to retrieve
+        ticker information in a separate processs. Currently there will only
+        be a single thread running in each process.
+
+        Raises error if given duplicate tickers, invalid tickers, or tickers
+        that are already being retrieved.
 
         Parameters
         ----------
-        sockets_to_start : List[str]
-            List of names of web sockets to run
+        tickers : List[str]
+            List of tickers to retrieve
 
         Returns
         -------
+        pid : str
+            UUID of process that was started
+
+        Raises
+        ------
         Optional[ValueError]
-            Returns ValueError if invalid inputs
+            Raises ValueError if invalid inputs
         """
         # Validate inputs
+        if len(set(tickers)) != len(tickers):
+            raise ValueError("Duplicate tickers")
+
+        tickers = set(tickers)
+
+        if tickers & self._running_tickers:
+            raise ValueError(f"{tickers & self._running_tickers} tickers already running")
+
+        # TODO: Web socket level verification to ensure ticker names are valid tickers
 
         # Update status
+        process = multiprocessing.Process(target=run_process,
+                                          args=(tickers, asyncio.Queue(), asyncio.Queue()))
+        pid = process.pid
+        process.start()
+        self._running_pids.add(process.pid)
+        self._running_tickers.update(tickers)
+        
+        self._pid_tickers[pid] = tickers
+        self._pid_status[pid] = WebSocketStatus.WORKING
 
-        # Split up sockets into correct sized batches
+        # self._pid_queues[pid] = (asyncio.Queue(), asyncio.Queue())
+        self._pid_processes[process.pid] = process
 
         # Start processes with helper function
-        pass
+        return process.pid
 
-    def stop(self, sockets_to_stop: List[str]) -> Optional[ValueError]:
+    def stop(self, pid) -> Optional[ValueError]:
         """Takes a list of web socket names and stops the appropriate 
         web sockets. Stopping web sockets should not affect any other 
         web sockets.
@@ -70,7 +118,8 @@ class WebSocketManager:
             Returns ValueError if invalid inputs
         """
         # Call cancel on web socket task
-        pass
+        self._pid_processes[pid].terminate()
+        self._pid_processes[pid].join(wait=1)
 
     def status(self, socket_name: str) -> Union[str, ValueError]:
         """Takes name of web socket and returns the operational status.
@@ -90,29 +139,7 @@ class WebSocketManager:
         # Validate web socket name
         return self._manager._status_dict[socket_name].value
 
-    @staticmethod
-    def _run_process(sockets_to_start: List[str], queues, status_dict,
-                     async_tasks) -> None:
-        """Function to be run inside of a process. Responsible for 
-        starting async tasks, updating async_tasks, updating status_dict.
 
-        # TODO: See if you can add error handeling
-
-        Parameters
-        ----------
-        sockets_to_start : List[str]
-            Names of sockets to start. Callers of this function are 
-            responsible for ensuring the validity of this parameter.
-        queues : Dict[str, multiprocessing.Queue]
-            Dictionary mapping web socket name to the name of queues 
-            to place data in.
-        status_dict : Dict[str, WebSocketEnum]
-            Dictionary mapping web scoket name to web socket status.
-        async_tasks : Dict[str, asyncio.Tasks]
-            Dictionary mapping web socket name to Tasks.
-        """
-        # You may need more helper functions to do this
-        # Some helpful stuff:
-        # https://docs.python.org/3/library/asyncio-task.html
-        # create_task, as_completed
-        pass
+def main():
+    w = WebSocketManager(None)
+    w.start(['BTC-USDT', 'ETH-USDT'])
