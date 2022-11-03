@@ -55,6 +55,7 @@ class Manager:
 
 
 def main():
+    print(os.getpid())
     w = Manager()
     p = w.web_sockets.start(["BTC-USDT"])
     print(p)

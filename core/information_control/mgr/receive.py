@@ -19,7 +19,7 @@ async def _main() -> None:
         await channel.set_qos(prefetch_count=1)
 
         logs_exchange = await channel.declare_exchange(
-            "coinbase", ExchangeType.FANOUT,
+            "BTC-USDT", ExchangeType.FANOUT,
         )
 
         # Declaring queue

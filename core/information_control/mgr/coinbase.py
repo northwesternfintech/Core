@@ -73,12 +73,14 @@ class CoinbaseWebSocket(WebSocket):
                         # if self.queue_1.full():
                             # print('working 1')
                         if msg_data != [] and time_id != []:
-                            df = pd.DataFrame(data=msg_data, index=time_id)
+
+                            # print(msg_data)
+                            # df = pd.DataFrame(data=msg_data, index=time_id)
                             # print(df)
                             # self.channel.basic_publish(exchange='coinbase', routing_key='', 
                             # body=df.to_string())
                             # print(df)
-                            await self.queue_1.put(df) 
+                            await self.queue_1.put(msg_data) 
                     # If market 2 data
                     elif temp_json['type'] == 'l2update':
                         curr_dt = temp_json['time'].replace('Z', '')
@@ -94,11 +96,12 @@ class CoinbaseWebSocket(WebSocket):
                         # if self.queue_2.full():
                             # print('working 2')
                         if msg_data != [] and time_id != []:
+                            # print(msg_data)
                             df = pd.DataFrame(data=msg_data, index=time_id)
                             # self.channel.basic_publish(exchange='coinbase', routing_key='', 
                             # body=df.to_string())
                             # print(df)
-                            await self.queue_2.put(df) 
+                            await self.queue_2.put(msg_data) 
         except Exception:
             print(traceback.format_exc())
         
@@ -239,22 +242,23 @@ def huh():
 # Test if it works!
 import time
 def main():
-    # q = multiprocessing.Queue()
-    # r = multiprocessing.Queue()
-    # coins = ['BTC-USDT', 'ETH-USDT']
-    # cwr = CoinbaseWebSocket(q, r,coins)
+    q = asyncio.Queue()
+    r = asyncio.Queue()
+    coins = ['BTC-USDT', 'ETH-USDT']
+    cwr = CoinbaseWebSocket(q, r,coins)
+    cwr.run()
     # asyncio.run(bruh())
-    p = Process(target=huh)
-    p.start()
-    children = multiprocessing.active_children()
-    for child in children:
-        print(child.pid)
+    # p = Process(target=huh)
+    # p.start()
+    # children = multiprocessing.active_children()
+    # for child in children:
+    #     print(child.pid)
 
     # time.sleep(5)
     # p.terminate()
     # p.join(timeout=1)
 
-    print("OUT")
+    # print("OUT")
     # p.terminate()
     # p.join()
 
