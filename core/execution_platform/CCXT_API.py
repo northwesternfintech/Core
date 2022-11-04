@@ -27,6 +27,7 @@ class executionPlatform():
         print(e)
 
   '''placeOrder() takes in the exchange name, trading pair symbols, trade type, trade side, trade amount, and price (if limit order) and places an order on the exchange'''
+  '''Returns an 'Order Structure' that contains all of the information related to that order'''
   def placeOrder(self, exchange:str, tradeSymbol:str, tradeType:str, tradeSide:str, tradeAmount:int, price:float=None): #->return order ID
     if exchange not in self.mapToExchange:
       raise Exception("ERROR>>Exchange Not Created!")
@@ -55,7 +56,7 @@ class executionPlatform():
       except Exception as e: 
         print(e)
 
-  '''inspectOrder() takes in the exchange name and order ID. It returns all of the order information in JSON format.'''
+  '''inspectOrder() takes in the exchange name and order ID. It returns all of the order information in the returned 'Order Structure'.'''
   def inspectOrder(self, exchange:str, orderID=None):
     if exchange not in self.mapToExchange:
       raise Exception("ERROR>>Exchange Not Created!")
