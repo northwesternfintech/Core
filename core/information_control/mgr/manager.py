@@ -1,17 +1,12 @@
-import os
-
-from typing import Optional, Dict
 import multiprocessing
+import os
+from typing import Optional
 
-from .web_socket_manager import WebSocketManager
 from .backtest_manager import BacktestManager
-
-# TODO: May need to implement a pub sub model for data if multiple backtests using the 
-# same stream. If we switch to containers for running backtest maybe we use rabbitmq/kafka
-
-# https://stackoverflow.com/questions/31267366/how-can-i-implement-a-pub-sub-pattern-using-multiprocessing
+from .web_socket_manager import WebSocketManager
 
 __all__ = ('Manager',)
+
 
 class Manager:
     """Manages the startup/operation/teardown of other core services
@@ -19,7 +14,7 @@ class Manager:
     """
     def __init__(self, path: Optional[str] = None):
         """Creates a new Manger and allocates resources for the manager to use
-        (process pool, queues, etc.). It is the responsibility of the user to 
+        (process pool, queues, etc.). It is the responsibility of the user to
         deallocate these resources using the .shutdown() method.
 
         Parameters
@@ -35,7 +30,7 @@ class Manager:
 
         self._max_cores = multiprocessing.cpu_count()
         self._cur_worker_count = 0
-        self._web_socket_manager = WebSocketManager(self) # TODO
+        self._web_socket_manager = WebSocketManager(self)  # TODO
         self._backtest_manager = BacktestManager(self)
 
     def shutdown(self):

@@ -1,16 +1,9 @@
-from typing import Dict, List, Optional, Union, Set, Tuple
-import multiprocessing
-import subprocess
-from uuid import uuid4
-
 import os
 import signal
+import subprocess
+from typing import Dict, List, Set
 
 from .status import WebSocketStatus
-from .coinbase import CoinbaseWebSocket
-
-import asyncio
-import psutil
 
 
 class WebSocketManager:
@@ -31,7 +24,7 @@ class WebSocketManager:
     """
     def __init__(self,
                  manager: 'Manager'):
-        """Creates a new WebSocketManager. Freeing resources is the 
+        """Creates a new WebSocketManager. Freeing resources is the
         responsibility of the Manager class.
 
         Parameters
@@ -45,7 +38,7 @@ class WebSocketManager:
         self._running_tickers: Set[int] = set()
 
         self._pid_tickers: Dict[int, Set[str]] = {}
-        self._pid_status: Dict[int, WebSocketStatus] =  {}
+        self._pid_status: Dict[int, WebSocketStatus] = {}
         self._pid_process: Dict[int] = {}
 
     def start(self, tickers: List[str]) -> str:
@@ -85,15 +78,17 @@ class WebSocketManager:
 
         # TODO: Web socket level verification to ensure ticker names are valid tickers
 
+        # Start worker
         cmd = (
             f"web-socket-worker "
             f"--tickers {' '.join(tickers)} "
         )
-
-        # Update status
-        process = subprocess.Popen(cmd.split(), shell=False, start_new_session=True)
+        process = subprocess.Popen(cmd.split(), shell=False, 
+                                   start_new_session=True)
         pid = process.pid
 
+        # Update status
+        self._manager._cur_worker_count += 1
         self._running_pids.add(pid)
         self._running_tickers.update(tickers)
         
@@ -103,12 +98,12 @@ class WebSocketManager:
 
         return pid
 
-    def stop(self, pid: str) -> Optional[ValueError]:
-        """Takes a list of web socket names and stops the appropriate 
-        web sockets. Stopping web sockets should not affect any other 
+    def stop(self, pid: str) -> None:
+        """Takes a list of web socket names and stops the appropriate
+        web sockets. Stopping web sockets should not affect any other
         web sockets.
 
-        Returns (not raises) error if given duplicate web sockets, 
+        Returns (not raises) error if given duplicate web sockets,
         invalid web sockets, or web sockets that are not running.
 
         Parameters
@@ -116,25 +111,24 @@ class WebSocketManager:
         sockets_to_stop : List[str]
             List of names of web sockets to run
 
-        Returns
-        -------
-        Optional[ValueError]
-            Returns ValueError if invalid inputs
+        Raises
+        ------
+        ValueError
+            Raises ValueError if invalid PID or PID is not running
         """
-        # Call cancel on web socket task
         if pid not in self._running_pids:
-            raise ValueError()
+            raise ValueError(f"{pid} is invalid or not running")
 
         os.kill(pid, signal.SIGTERM)
 
+        self._manager._cur_worker_count -= 1
         self._running_pids.remove(pid)
         self._running_tickers -= self._pid_tickers[pid]
         self._pid_tickers.pop(pid)
         self._pid_status[pid] = WebSocketStatus.STOPPED
         self._pid_process.pop(pid)
 
-
-    def status(self, pid: str) -> Union[str, ValueError]:
+    def status(self, pid: str) -> str:
         """Takes name of web socket and returns the operational status.
 
         Returns (not raises) error if given invalid web socket name.
@@ -146,14 +140,19 @@ class WebSocketManager:
 
         Returns
         -------
-        Union[str, ValueError]
-            Returns ValueError if invalid input or returns status
+        str
+            Returns PID status
+
+        Raises
+        ------
+        ValueError
+            Raises ValueError if unknown PID
         """
         if pid not in self._pid_status:
             raise ValueError(f"Unknown PID {pid}")
 
         self._update_status()
-        return self._pid_status[pid]
+        return str(self._pid_status[pid])
 
     def clear_status(self):
         """
@@ -167,7 +166,6 @@ class WebSocketManager:
         for pid in pid_to_clear:
             self._pid_status.pop(pid)
 
-
     def _update_status(self):
         """
         Checks whether running web sockets are still operational
@@ -175,11 +173,11 @@ class WebSocketManager:
         failed_pids = []
         for pid in self._running_pids:
             process = self._pid_process[pid]
-            print(process.poll())
             if process.poll() and process.poll() < 0:
                 failed_pids.append(pid)
 
         for pid in failed_pids:
+            self._manager._cur_worker_count -= 1
             self._running_pids.remove(pid)
             self._running_tickers -= self._pid_tickers[pid]
             self._pid_tickers.pop(pid)
@@ -188,9 +186,4 @@ class WebSocketManager:
 
 
 def main():
-    w = WebSocketManager(Manager())
-    p = w.start(["BTC-USDT"])
-    print(p)
-    import time
-    time.sleep(10)
-    w.stop(p)
+    pass

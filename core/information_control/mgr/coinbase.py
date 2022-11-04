@@ -96,13 +96,13 @@ class CoinbaseWebSocket(WebSocket):
                         # if self.queue_2.full():
                             # print('working 2')
                         if msg_data != [] and time_id != []:
-                            # print(msg_data)
                             df = pd.DataFrame(data=msg_data, index=time_id)
                             # self.channel.basic_publish(exchange='coinbase', routing_key='', 
                             # body=df.to_string())
                             # print(df)
                             await self.queue_2.put(msg_data) 
-        except Exception:
+        except Exception as e:
+            raise e
             print(traceback.format_exc())
         
 
