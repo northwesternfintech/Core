@@ -19,16 +19,19 @@ async def main(coins):  # TODO: Don't think this needs to be async
         queue_lvl1 = multiprocessing.Queue()
         queue_lvl2 = multiprocessing.Queue()
 
-        # Initializing the websockets (Only coinbase has implementations right now so I'll only initialize that)
-        coinbase = CoinbaseWebSocket(queue_lvl1, queue_lvl2, coins)
-
         try:
+            # Initializing web sockets as the program traverses through the try except
+            # layer to avoid unnecessarily initializing websockets
+            coinbase = CoinbaseWebSocket(queue_lvl1, queue_lvl2, coins)
             executor.submit(coinbase.run())
         except Exception as e:
-            # Try another websocket that was initialized, and if that doesn't work, layer in another try-except
-            # In the end, if none of the websockets work, use an API
-            print(e)
-            print("Should try something else")
+            try:
+                binance = BinanceWebSocket(queue_lvl1, queue_lvl2, coins)
+                executor.submit(binance.run())
+            except:
+                # Try another websocket that was initialized, and if that doesn't work, layer in another try-except
+                # In the end, if none of the websockets work, use an API
+                print("Need to use API")
 
 # Test if it works!
 def activate(coins):
