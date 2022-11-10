@@ -37,6 +37,9 @@ class Strategy(BackTester):
         self.total_daily_assets = [] # list of total assets in a given day / index maps to index of self.dates
         self.dates = [] # list of dates / index maps to index of self.total_daily_assets
 
+        self.week_day = week_day # Integer with monday as 0 and sunday as 6
+        self.month_day = month_day # Number from 1 to 31
+
     def back_testing(self, start_time=None, end_time=None):
         '''
         back_testing takes in the start and end time, then proceed to 
@@ -52,6 +55,15 @@ class Strategy(BackTester):
         
         print('\n started backtesting')
         while self.current_time != end_time:
+            if(self.is_trading_date(self.current_time)): 
+                self.run_daily()
+                if(self.week_day == self.current_time.weekday()): 
+                    self.run_weekly()
+                if(self.month_day == self.current_time.day()): 
+                    self.run_monthly()
+                self.current_time += datetime.timedelta(days=1)
+            else:
+                self.current_time = self.next_nearest_trading_date()
             pass
 
             # Run daily/weekly/monthly
@@ -132,7 +144,9 @@ class Strategy(BackTester):
         '''
         handler for run_daily, to be called in back_testing()
         '''
-        pass
+        self.on_market_open()
+        self.run_daily()
+        self.on_market_close()
     
     def handle_run_weekly(self):
         '''
