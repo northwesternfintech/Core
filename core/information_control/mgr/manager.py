@@ -52,7 +52,7 @@ class Manager:
 def main():
     print(os.getpid())
     w = Manager()
-    p = w.web_sockets.start(["BTC-USDT"])
+    p = w.web_sockets.start(["BTC-USDT", "ETH-USDT"])
     print(p)
     import time
     time.sleep(5)

@@ -6,6 +6,7 @@ import signal
 from typing import List
 
 from aio_pika import DeliveryMode, ExchangeType, Message, connect
+import zmq
 
 from .coinbase import CoinbaseWebSocket
 
@@ -28,6 +29,9 @@ class WebSocketWorker:
         self._port = port
         self._tickers = tickers
         self._ticker_exchanges = {}
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.PUB)
+        self._socket.bind("tcp://*:5556")
 
     async def _consume(self, queue):
         """Consumes data from a queue and pushes it to a broker.
@@ -37,25 +41,12 @@ class WebSocketWorker:
         queue : asyncio.Queue
             Queue to consume from.
         """
-        connection = await connect("amqp://guest:guest@localhost/")
-        channel = await connection.channel()
-        ticker_exchanges = {}
-        for ticker in self._tickers:
-            ticker_exchanges[ticker] = await channel.declare_exchange(
-                ticker, ExchangeType.FANOUT,
-            )
-
         while True:
             data = await queue.get()
             queue.task_done()
 
-            message = Message(
-                bytes(json.dumps(data), 'utf-8'),
-                delivery_mode=DeliveryMode.PERSISTENT,
-            )
-            exchange = ticker_exchanges[data['ticker']]
-
-            await exchange.publish(message, routing_key='')
+            message = f"{data['ticker']} {json.dumps(data)}"
+            self._socket.send_string(message)
 
     async def _run_async(self):
         """
@@ -67,7 +58,7 @@ class WebSocketWorker:
         cwr = CoinbaseWebSocket(ml1_queue, ml2_queue, self._tickers)
 
         tasks = [asyncio.create_task(cwr._run()),
-                 asyncio.create_task(self._consume(ml1_queue)),
+                #  asyncio.create_task(self._consume(ml1_queue)),
                  asyncio.create_task(self._consume(ml2_queue))]
 
         await asyncio.gather(*tasks)
@@ -77,7 +68,7 @@ class WebSocketWorker:
         Wrapper function for starting run_async.
         """
         try:
-            asyncio.run(self.run_async())
+            asyncio.run(self._run_async())
         except Exception as e:
             print(e)
             os.kill(os.getpid(), signal.SIGTERM)
