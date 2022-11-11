@@ -5,8 +5,8 @@ import os
 import signal
 from typing import List
 
-from aio_pika import DeliveryMode, ExchangeType, Message, connect
-import zmq
+# from aio_pika import DeliveryMode, ExchangeType, Message, connect
+import zmq.asyncio
 
 from .coinbase import CoinbaseWebSocket
 
@@ -29,9 +29,12 @@ class WebSocketWorker:
         self._port = port
         self._tickers = tickers
         self._ticker_exchanges = {}
-        self._context = zmq.Context()
+        self._context = zmq.asyncio.Context()
         self._socket = self._context.socket(zmq.PUB)
-        self._socket.bind("tcp://*:5556")
+        print(f"tcp://{self._address}:{self._port}")
+        # self._socket.connect(f"tcp://{self._address}:{self._port}")
+        self._socket.connect(f"tcp://127.0.0.1:50001")
+
 
     async def _consume(self, queue):
         """Consumes data from a queue and pushes it to a broker.
@@ -45,8 +48,8 @@ class WebSocketWorker:
             data = await queue.get()
             queue.task_done()
 
-            message = f"{data['ticker']} {json.dumps(data)}"
-            self._socket.send_string(message)
+            message = f"{data['ticker']} {json.dumps(data)}".encode('utf-8')
+            await self._socket.send(message)
 
     async def _run_async(self):
         """
@@ -58,7 +61,7 @@ class WebSocketWorker:
         cwr = CoinbaseWebSocket(ml1_queue, ml2_queue, self._tickers)
 
         tasks = [asyncio.create_task(cwr._run()),
-                #  asyncio.create_task(self._consume(ml1_queue)),
+                 asyncio.create_task(self._consume(ml1_queue)),
                  asyncio.create_task(self._consume(ml2_queue))]
 
         await asyncio.gather(*tasks)
@@ -76,11 +79,20 @@ class WebSocketWorker:
 
 def cli_run():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--address", required=True,
+        help="Address to push data to"
+    )
+    parser.add_argument(
+        "--port", required=True,
+        help="Port of address to push data to"
+    )
     parser.add_argument(
         "--tickers", nargs="*", required=True,
         help="Tickers to run in websocket"
     )
     args = parser.parse_args()
 
-    worker = WebSocketWorker(None, None, args.tickers)
+    worker = WebSocketWorker(args.address, args.port, args.tickers)
     worker.run()

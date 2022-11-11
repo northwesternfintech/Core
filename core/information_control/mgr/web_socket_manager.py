@@ -5,6 +5,8 @@ from typing import Dict, List, Set
 
 from .status import WebSocketStatus
 
+from .utils import find_open_port
+
 
 class WebSocketManager:
     """Manages the startup/status/shutdown of web sockets.
@@ -35,13 +37,13 @@ class WebSocketManager:
         self._manager = manager
 
         self._running_pids: Set[int] = set()
-        self._running_tickers: Set[int] = set()
+        self._running_tickers: Set[str] = set()
 
         self._pid_tickers: Dict[int, Set[str]] = {}
         self._pid_status: Dict[int, WebSocketStatus] = {}
         self._pid_process: Dict[int] = {}
 
-    def start(self, tickers: List[str]) -> str:
+    def start(self, tickers: List[str]) -> int:
         """Takes a list of ticker names and starts a websocket to retrieve
         ticker information in a separate processs. Currently there will only
         be a single thread running in each process.
@@ -56,7 +58,7 @@ class WebSocketManager:
 
         Returns
         -------
-        pid : str
+        pid : int
             PID of process that was started
 
         Raises
@@ -68,21 +70,27 @@ class WebSocketManager:
         if len(set(tickers)) != len(tickers):
             raise ValueError("Duplicate tickers")
 
-        tickers = set(tickers)
+        tickers_set = set(tickers)
 
-        if tickers & self._running_tickers:
-            raise ValueError(f"{tickers & self._running_tickers} tickers already running")
+        if tickers_set & self._running_tickers:
+            raise ValueError(f"{tickers_set & self._running_tickers} tickers already running")
 
         if self._manager._cur_worker_count >= self._manager._max_cores:
             raise ValueError("At max process count. Cancel processes to start more")
 
         # TODO: Web socket level verification to ensure ticker names are valid tickers
 
+        if not self._manager._pub_sub_port:
+            self._manager._pub_sub_port = find_open_port()
+
         # Start worker
         cmd = (
             f"web-socket-worker "
+            f"--address {self._manager._address} "
+            f"--port {self._manager._pub_sub_port} "
             f"--tickers {' '.join(tickers)} "
         )
+
         process = subprocess.Popen(cmd.split(), shell=False, 
                                    start_new_session=True)
         pid = process.pid
@@ -90,15 +98,15 @@ class WebSocketManager:
         # Update status
         self._manager._cur_worker_count += 1
         self._running_pids.add(pid)
-        self._running_tickers.update(tickers)
-        
-        self._pid_tickers[pid] = tickers
+        self._running_tickers.update(tickers_set)
+
+        self._pid_tickers[pid] = tickers_set
         self._pid_status[pid] = WebSocketStatus.WORKING
         self._pid_process[pid] = process
 
         return pid
 
-    def stop(self, pid: str) -> None:
+    def stop(self, pid: int) -> None:
         """Takes a list of web socket names and stops the appropriate
         web sockets. Stopping web sockets should not affect any other
         web sockets.
@@ -108,8 +116,8 @@ class WebSocketManager:
 
         Parameters
         ----------
-        sockets_to_stop : List[str]
-            List of names of web sockets to run
+        pid : int
+            PID of worker to stop
 
         Raises
         ------

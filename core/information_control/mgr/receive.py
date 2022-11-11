@@ -41,11 +41,12 @@ import sys
 #     asyncio.run(_main())
 
 def main():
-    print(" [*] Waiting for logs. To exit press CTRL+C")
+    print("[*] Waiting for logs. To exit press CTRL+C")
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
-    socket.connect("tcp://localhost:5556")
+    socket.connect("tcp://127.0.0.1:50002")
     socket.setsockopt_string(zmq.SUBSCRIBE, "BTC-USDT")
+    socket.setsockopt_string(zmq.SUBSCRIBE, "ETH-USDT")
 
     while True:
         string = socket.recv()
