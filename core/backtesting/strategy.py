@@ -245,7 +245,7 @@ class Strategy(BackTester):
         return_differentials = [returns - riskfree for returns, riskfree in zip(self.daily_gain_loss, self.benchmark())]
         return_differentials = np.array(return_differentials)
         expected_differential = np.mean(return_differentials)
-        std = np.std(return_differentials)
+        std = np.std(self.daily_gain_loss)
         self.sharpe_ratio = expected_differential/std
         return True
 
