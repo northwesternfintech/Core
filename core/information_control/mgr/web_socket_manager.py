@@ -80,17 +80,17 @@ class WebSocketManager:
 
         # TODO: Web socket level verification to ensure ticker names are valid tickers
 
-        if not self._manager._pub_sub_port:
-            self._manager._pub_sub_port = find_open_port()
+        # if not self._manager._pub_sub_port:
+        #     self._manager._pub_sub_port = find_open_port()
 
         # Start worker
         cmd = (
             f"web-socket-worker "
             f"--address {self._manager._address} "
-            f"--port {self._manager._pub_sub_port} "
+            f"--port {self._manager._pub_port} "
             f"--tickers {' '.join(tickers)} "
         )
-
+        print(cmd)
         process = subprocess.Popen(cmd.split(), shell=False, 
                                    start_new_session=True)
         pid = process.pid

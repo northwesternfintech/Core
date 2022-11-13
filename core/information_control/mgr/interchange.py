@@ -27,6 +27,7 @@ class Interchange:
         self._interchange_address = address
         self._xsub_port = pub_sub_ports[0]
         self._xpub_port = pub_sub_ports[1]
+
         self._context = zmq.Context()
 
     def _run_pub_sub_proxy(self):
@@ -91,5 +92,12 @@ def cli_run():
     )
     args = parser.parse_args()
 
-    interchange = Interchange(args.address, args.pub_sub_ports)
+    pub_sub_ports = None
+    if isinstance(args.pub_sub_ports, str):
+        pub_str, sub_str = args.pub_sub_ports.split(",")
+        pub_sub_ports = (int(pub_str), int(sub_str))
+    else:
+        pub_sub_ports = args.pub_sub_ports
+
+    interchange = Interchange(args.address, pub_sub_ports)
     interchange.run()

@@ -4,7 +4,7 @@ from ..manager import Manager
 
 app = Flask(__name__)
 
-manager: Manager  = None
+manager: Manager = Manager()
 
 @app.route('/status', methods=['GET'])
 def get_status():
@@ -42,21 +42,26 @@ def start_web_sockets():
     404
         If web socket name can't be found
     """
-    request_params = request
+    request_params = request.json
+    print(request)
     web_socket_names = []
 
     try:
-        web_socket_names = request["web_socket_names"]
+        web_socket_names = request_params["web_socket_names"]
     except KeyError:
-        return ValueError(), 400 # TODO: Return custom error
+        print("HERE")
+        return 'key_error', 400 # TODO: Return custom error
 
     if not web_socket_names:
-        return ValueError(), 400
+        print("WHAT")
+        return 'no web sockets', 400
 
     try:
         manager.web_sockets.start(web_socket_names)
     except Exception as e:
-        return ValueError(), 404 
+        print("OOF")
+        print(e)
+        return 'run error', 404 
 
 
 @app.route('/web_sockets/stop', methods=['POST'])
@@ -78,21 +83,25 @@ def stop_web_sockets():
     404
         If web socket name can't be found
     """
-    request_params = request
-    web_socket_names = []
+    print("HI")
+    request_params = request.args
+    pid = None
 
     try:
-        web_socket_names = request["web_socket_names"]
+        pid = request["pid"]
     except KeyError:
         return ValueError(), 400 # TODO: Return custom error
 
-    if not web_socket_names:
+    if not pid:
         return ValueError(), 400
 
     try:
-        manager.web_sockets.stop(web_socket_names)
+        manager.web_sockets.stop(pid)
     except Exception as e:
-        return ValueError(), 404 
+        print(e)
+        return ValueError(str(e)), 404 
+
+    return "nice"
 
 
 @app.route('/web_sockets/status/<string:web_socket_name>', methods=['GET'])
@@ -110,7 +119,7 @@ def web_sockets_status(web_socket_name):
     try:
         return jsonify(manager.web_sockets.status(web_socket_name))
     except Exception as e:
-        return ValueError(), 500
+        return ValueError(e), 500
 
 
 @app.route('/backtest/start', methods=['POST'])
@@ -166,7 +175,11 @@ def backtest_status(web_socket_name):
     except Exception as e:
         return ValueError(), 500
 
+@app.route("/", methods=["GET"])
+def stat():
+    return "Hello world!"
+
 
 def main():
-    app.run(threaded=False)
+    app.run(threaded=False, debug=False)
     print("hello world")

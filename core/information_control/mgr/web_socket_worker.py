@@ -1,14 +1,11 @@
 import argparse
 import asyncio
+import functools
 import json
-import os
 import signal
 from typing import List
-import time
 
 import zmq.asyncio
-import sys
-import functools
 
 from .coinbase import CoinbaseWebSocket
 
