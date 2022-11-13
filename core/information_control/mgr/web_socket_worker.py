@@ -4,9 +4,11 @@ import json
 import os
 import signal
 from typing import List
+import time
 
-# from aio_pika import DeliveryMode, ExchangeType, Message, connect
 import zmq.asyncio
+import sys
+import functools
 
 from .coinbase import CoinbaseWebSocket
 
@@ -28,16 +30,32 @@ class WebSocketWorker:
         self._address = address
         self._port = port
         self._tickers = tickers
-        self._ticker_exchanges = {}
         self._context = zmq.asyncio.Context()
         self._socket = self._context.socket(zmq.PUB)
-        print(f"tcp://{self._address}:{self._port}")
-        # self._socket.connect(f"tcp://{self._address}:{self._port}")
-        self._socket.connect(f"tcp://127.0.0.1:50001")
+        self._socket.connect(f"tcp://{self._address}:{self._port}")
 
+    def _handle_sigterm(self, signame):
+        """Cancels tasks on SIGTERM
+
+        Parameters
+        ----------
+        signame : str
+            Name of signal (ignored).
+        """
+        for task in self._produce_tasks:
+            task.cancel()
+
+        for task in self._consume_tasks:
+            task.cancel()
+
+    async def _send_termination(self):
+        """Publishes termination message to all subscribers"""
+        for ticker in self._tickers:
+            message = f"{ticker} TERMINATE".encode('utf-8')
+            await self._socket.send(message)
 
     async def _consume(self, queue):
-        """Consumes data from a queue and pushes it to a broker.
+        """Consumes data from queue and pushes it to a broker.
 
         Parameters
         ----------
@@ -55,16 +73,22 @@ class WebSocketWorker:
         """
         Awaits web socket and consumer tasks asynchronously.
         """
+        self._kill_event = asyncio.Event()
+        loop = asyncio.get_event_loop()
+
+        loop.add_signal_handler(signal.SIGTERM,
+                                functools.partial(self._handle_sigterm, signal.SIGTERM))
+
         ml1_queue = asyncio.Queue()
         ml2_queue = asyncio.Queue()
 
         cwr = CoinbaseWebSocket(ml1_queue, ml2_queue, self._tickers)
 
-        tasks = [asyncio.create_task(cwr._run()),
-                 asyncio.create_task(self._consume(ml1_queue)),
-                 asyncio.create_task(self._consume(ml2_queue))]
+        self._produce_tasks = [asyncio.create_task(cwr._run())]
+        self._consume_tasks = [asyncio.create_task(self._consume(ml1_queue)),
+                               asyncio.create_task(self._consume(ml2_queue))]
 
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*self._consume_tasks)
 
     def run(self) -> None:
         """
@@ -72,9 +96,8 @@ class WebSocketWorker:
         """
         try:
             asyncio.run(self._run_async())
-        except Exception as e:
-            print(e)
-            os.kill(os.getpid(), signal.SIGTERM)
+        except:
+            asyncio.run(self._send_termination())
 
 
 def cli_run():

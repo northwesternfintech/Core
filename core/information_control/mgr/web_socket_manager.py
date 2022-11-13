@@ -126,7 +126,7 @@ class WebSocketManager:
         """
         if pid not in self._running_pids:
             raise ValueError(f"{pid} is invalid or not running")
-
+        print(f"killing {pid}")
         os.kill(pid, signal.SIGTERM)
 
         self._manager._cur_worker_count -= 1

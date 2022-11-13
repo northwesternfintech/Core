@@ -31,14 +31,15 @@ class Interchange:
 
     def _run_pub_sub_proxy(self):
         """Thread function for running proxy for pub-sub model."""
+        # Connects to publishers
         self._frontend = self._context.socket(zmq.XSUB)
         self._frontend.setsockopt(zmq.LINGER, 0)
         self._frontend.bind(f"tcp://{self._interchange_address}:{self._xsub_port}")
 
-        # Socket facing services
+        # Connects to subscribers
         self._backend = self._context.socket(zmq.XPUB)
         self._backend.setsockopt(zmq.LINGER, 0)
-        # print(f"Pub bound on tcp://{self._interchange_address}:{self._xpub_port}, tcp://{self._interchange_address}:{self._xsub_port}" )
+
         self._backend.bind(f"tcp://{self._interchange_address}:{self._xpub_port}")
 
         try:
@@ -52,12 +53,12 @@ class Interchange:
         self._context.term()
         self._proxy_thread.join()
 
-    def handle_sigterm(self, sig_num, curr_stack_frame):
+    def _handle_sigterm(self, sig_num, curr_stack_frame):
         self.stop()
 
     def run(self):
         """Starts all threads to manage information flow"""
-        signal.signal(signal.SIGTERM, self.handle_sigterm)
+        signal.signal(signal.SIGTERM, self._handle_sigterm)
 
         self._kill_event = threading.Event()
         

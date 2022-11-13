@@ -1,14 +1,12 @@
 import multiprocessing
 import os
+import signal
+import subprocess
+import time
 from typing import Optional
 
 from .backtest_manager import BacktestManager
 from .web_socket_manager import WebSocketManager
-from .utils import find_open_port
-
-import zmq
-import subprocess
-import signal
 
 __all__ = ('Manager',)
 
@@ -57,6 +55,7 @@ class Manager:
         for pid in self.web_sockets._running_pids.copy():
             self.web_sockets.stop(pid)
 
+        time.sleep(1)
         os.kill(self._interchange_pid, signal.SIGTERM)
 
     @property
