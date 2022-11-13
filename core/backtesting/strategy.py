@@ -241,7 +241,10 @@ class Strategy(BackTester):
     def calculate_sharpe_ratio(self) :
         #E[Returns - Riskfree Returns]/standard deviation of excess return
         #Benchmark/RiskReturns S&P
+        if len(self.daily_gain_loss)==0:
+            raise ValueError("Empty data for daily gain/loss")
 
+        assert len(self.daily_gain_loss)==len(self.benchmark()), "Number of benchmark values does not match number of values in daily gain/loss."
         return_differentials = [returns - riskfree for returns, riskfree in zip(self.daily_gain_loss, self.benchmark())]
         return_differentials = np.array(return_differentials)
         expected_differential = np.mean(return_differentials)
