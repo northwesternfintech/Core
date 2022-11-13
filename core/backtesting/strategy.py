@@ -5,6 +5,7 @@ import holidays
 import datetime
 import portfolio
 import numpy as np
+import time
 
 class BackTester:
     
@@ -75,6 +76,7 @@ class Strategy(BackTester):
         self.current_time = datetime.strptime(start, "%Y-%m-%d").date()
         end_time = datetime.strptime(end, "%Y-%m-%d").date()
         
+        algoStartTime = time.time()
         print('\n started backtesting')
         while self.current_time != end_time:
             if(self.is_trading_date(self.current_time)): 
@@ -100,9 +102,9 @@ class Strategy(BackTester):
         # Calculate statistical data
         # Calculating Sharpe Ratio
 
-
+        runtime = algoStartTime - time.time()
         print('\n finished backtesting, started visualizing')
-        
+        print('\n Runtime was %s seconds' % runtime)
         self.visualize()
         #save the log as a txt
     
