@@ -81,10 +81,19 @@ class executionPlatform():
       else:
         try:
             self.mapToExchange[exchange].cancelOrder(orderID)
+            orderStruct = self.inspectOrder(exchange,orderID)
+            if orderStruct['status'] == 'cancelled':
+              return f"Order {orderID} successfully cancelled"
+            else:
+              return f"ERROR>>> The order {orderID} is currently {orderStruct['status']}."
         except Exception as e: 
           print(e)
 
   '''calls the given algorithm and then runs all the orders returned from it.
+
+  return type of algorithm: list of dictionaries with the following fields
+  [{exchange:str, tradeSymbol:str, tradeType:str, tradeSide:str, tradeAmount:int, price:float},]
+
   def update(self,algorithm):
     orders = algorithm()
     result = [None for _ in range(len(orders))]
