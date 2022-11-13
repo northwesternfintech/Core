@@ -28,7 +28,7 @@ class executionPlatform():
 
   '''placeOrder() takes in the exchange name, trading pair symbols, trade type, trade side, trade amount, and price (if limit order) and places an order on the exchange'''
   '''Returns an 'Order Structure' that contains all of the information related to that order'''
-  def placeOrder(self, exchange:str, tradeSymbol:str, tradeType:str, tradeSide:str, tradeAmount:int, price:float=None): #->return order ID
+  def placeOrder(self, exchange:str, tradeSymbol:str, tradeType:str, tradeSide:str, tradeAmount:int, price:float=None): #->return order structure
     if exchange not in self.mapToExchange:
       raise Exception("ERROR>>Exchange Not Created!")
     else:
@@ -38,7 +38,7 @@ class executionPlatform():
         elif tradeType == 'market':
           orderBook = self.mapToExchange[exchange].createOrder(tradeSymbol, tradeType, tradeSide, tradeAmount)
 
-        return orderBook['id']
+        return orderBook
 
       except Exception as e: 
         print(e)
@@ -84,6 +84,16 @@ class executionPlatform():
         except Exception as e: 
           print(e)
 
+  '''calls the given algorithm and then runs all the orders returned from it.
+  def update(self,algorithm):
+    orders = algorithm()
+    result = [None for _ in range(len(orders))]
+    for i,order in orders:
+      result[i] = self.placeOrder(order) #unpack
+      #get all the order info and then call self.createOrder()
+      #return a list of order structures - each order structure corresponding to that order
+    return result
+'''
 
 
 
