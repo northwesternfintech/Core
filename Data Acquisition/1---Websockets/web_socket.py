@@ -21,19 +21,19 @@ class WebSocket(ABC): # TODO: Decide whether its "websocket" or "web socket"
         self.queue_2 = queue_2
         self.coins = coins
 
-    @abstractmethod
-    def on_open(self) -> Dict:
-        """Generates a subscribe message to be converted into json to be sent 
-        to endpoint
+    # @abstractmethod
+    # def on_open(self) -> Dict:
+    #     """Generates a subscribe message to be converted into json to be sent 
+    #     to endpoint
 
-        Returns
-        -------
-        Dict
-            Subscribe message to be sent to endpoint
-        """
-        raise NotImplementedError
+    #     Returns
+    #     -------
+    #     Dict
+    #         Subscribe message to be sent to endpoint
+    #     """
+    #     raise NotImplementedError
 
-    @abstractmethod
+    # @abstractmethod
     async def _run(self) -> None:
         """
         Add all your async run junk here
