@@ -1,7 +1,10 @@
-import matplotlib
+import matplotlib as plt
 import pandas as pd
+import os
+import shutil
+
 import holidays
-import datetime
+from datetime import datetime, timedelta
 import portfolio
 
 class BackTester:
@@ -44,12 +47,13 @@ class Strategy(BackTester):
 
         self.win_rate = 0
 
-        # list of total assets in a given day at open/open
+        # list of total assets in a given day at open/close
         # index maps to index of self.dates
         self.total_daily_assets_open = [] 
         self.total_daily_assets_close = []
 
         self.daily_gain_loss = [] # List of daily gain/loss indexed to self.dates
+        self.monthly_gain_loss = {'dates': [], 'gain_loss':[]} # Dictionary of two lists / [0] -> dates / [1] -> monthly gain loss
 
         self.dates = [] # list of dates / index maps to index of self.total_daily_assets
 
@@ -77,7 +81,7 @@ class Strategy(BackTester):
                     self.run_weekly()
                 if(self.month_day == self.current_time.day()): 
                     self.run_monthly()
-                self.current_time += datetime.timedelta(days=1)
+                self.current_time += timedelta(days=1)
             else:
                 self.current_time = self.next_nearest_trading_date()
             pass
@@ -96,6 +100,7 @@ class Strategy(BackTester):
         
         self.visualize()
     
+
     def log(self, msg, time): 
         '''
         This function logs every action that the strategy has taken, from
@@ -107,30 +112,101 @@ class Strategy(BackTester):
         '''
         self.log.append([msg, time])
     
-    def visualize(self, plot_total_assets=True, plot_daily_returns=True, plot_win_rate=True): 
+    def fetch_viz(self, plot_total_assets=True, plot_daily_returns=True, plot_win_rate=True): 
         '''
         This function should be executed after backtesting for visualizing the 
         performance of the strategy
         Use matplotlibe/seaborn/etc. to make graphs, then display the logs by the 
         side, gotta make this look fancy
+        Fetches the graphs and logs from the saved directory
 
         Boolean parameters gives user control over which variables to display
 
         plot_total_assets: a boolean that indicates whether total_assets should be displayed
         plot_daily_returns: a boolean that indicates whether daily_returns should be displayed
-        plot_win_rate: a boolean that indicates whether daily returns should be displayed
+        plot_win_rate: a boolean that indicates whether win_rate should be displayed
         '''
 
-        if(plot_total_assets):
-            # plot self.total_daily_assets vs self.dates with plt
-            pass
-        if(plot_daily_returns):
-            # plot self.daily_gain_loss vs self.dates with plt
-            pass
-
-        # ...
-
         pass
+
+    def make_viz(self, directory='backtester', plot_total_assets=True, plot_daily_returns=True, plot_monthly_returns=True, plot_win_rate=True): 
+        '''
+        Creates directory to save figures and logs for the back test
+        '''
+        # Create directory for graphs
+        
+        # file_path = os.path.abspath(__file__)
+        file_path = os.getcwd()
+        file_path = os.path.join(file_path, directory)
+
+        # try making directory
+        try:
+            os.makedirs(file_path)
+        except OSError as error:
+            print("Could not create directory:", error)
+
+        # Make Transaction Log
+        self.make_log(file_path)
+
+        # Make graphs
+        if(plot_total_assets):
+            # plot self.total_daily_assets vs self.dates with create_plot()
+            self.make_plot(x_data=self.dates, y_data=self.total_daily_assets_open, file_path=file_path, 
+                            xlabel='Dates', ylabel='Total Daily Assets (USD)', 
+                            title=f'{self.current_time.strftime("%Y-%m-%d")}_total_daily_assets')
+        if(plot_daily_returns):
+            # plot self.daily_gain_loss vs self.dates with create_plot()
+            self.make_plot(x_data=self.dates, y_data=self.daily_gain_loss, file_path=file_path,
+                            xlabel='Dates', ylabel='Percentage Change Assets', 
+                            title=f'{self.current_time.strftime("%Y-%m-%d")}_daily_gain_loss')
+
+        if(plot_monthly_returns):
+            # plot self.daily_gain_loss vs self.dates with create_plot()
+            self.make_plot(x_data=self.monthly_gain_loss['dates'], y_data=self.monthly_gain_loss['gain_loss'], file_path=file_path,
+                            xlabel='Dates', ylabel='Percentage Change Assets', 
+                            title=f'{self.current_time.strftime("%Y-%m-%d")}_monthly_gain_loss')
+
+        return
+
+    def make_log(self, file_path): 
+        '''
+        Creates a text file containing a log of the transactions of portfolio
+        '''
+
+        transactions = self.portfolio.get_transactions()
+
+        with open(file_path + 'transactions_log.txt', 'w') as f:
+            for i in range(len(transactions)):
+                line = transactions[i]
+                f.write(line[0], line[1], line[2], line[3])
+                f.write('\n')
+
+        return
+
+    def make_plot(self, x_data, y_data, title, xlabel, ylabel, file_path): 
+        '''
+        Creates PNGs of plots given the data and axis.
+        '''
+            
+        # date_time = self.dates
+        # date_time = pd.to_datetime(date_time)
+
+        df = pd.DataFrame()
+        df['x'] = x_data
+        df['y'] = y_data
+        df = df.set_index('x')
+        plt.plot(df)
+
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend()
+
+        plot_name = f'{file_path}/{title}_plot.png'
+
+        plt.savefig(plot_name)
+
+        return
 
     def update_testing_data(self):
         '''
@@ -145,6 +221,8 @@ class Strategy(BackTester):
     def get_total_assets(self): return [self.total_daily_assets_open, self.total_daily_assets_close]
 
     def get_daily_gain_loss(self): return self.daily_gain_loss
+
+    def get_monthly_gain_loss(self): return self.monthly_gain_loss
 
     def get_win_rate(self): return [self.win_rate, self.winning_action, self.total_action]
 
@@ -166,7 +244,7 @@ class Strategy(BackTester):
         for h in holdings:
 
             # get the price of the holdings at the current date
-            str_date = self.current_time.strf("%Y-%m-%d")
+            str_date = self.current_time.strftime("%Y-%m-%d")
             partial_data = data[data['Name']==h[0] and data['date']==str_date]
             curr_price = float(partial_data[data_column])
 
@@ -189,6 +267,28 @@ class Strategy(BackTester):
 
         return True
 
+    def calculate_monthly_gain_loss(self):
+        '''
+        Calculate the monthly gain/loss based from open-close
+
+        Maybe month to date?
+        '''
+        self.monthly_gain_loss['dates'].append(self.dates[0])
+        self.monthly_gain_loss['gain_loss'].append(0)
+        
+        curr_data = self.total_daily_assets_open[0]
+        prev_data = self.total_daily_assets_open[0]
+
+        for i in range(len(self.dates)):
+            # If first of month
+            if self.dates[i].day == 1:
+                curr_data = self.total_daily_assets_open[i]
+                self.monthly_gain_loss['dates'].append(self.dates[i])
+                self.monthly_gain_loss['gain_loss'].append((curr_data - prev_data) / prev_data)
+                prev_data = curr_data
+                
+        return
+        
     def calculate_win_rate(self):
         '''
         Calculate and store count for total actions, winning actions, and win rate
@@ -233,7 +333,7 @@ class Strategy(BackTester):
         date: datetime object
         '''
         while not self.is_trading_date(date): # check if current date is trading date
-            date+= datetime.timedelta(days=1) # move onto next date
+            date+= timedelta(days=1) # move onto next date
         
         return date
     
