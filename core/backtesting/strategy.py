@@ -1,4 +1,3 @@
-import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
@@ -52,7 +51,7 @@ class Strategy(BackTester):
 
         self.sharpe_ratio = 0
         
-
+        self.prices = None
 
         # list of total assets in a given day at open/open
         # index maps to index of self.dates
@@ -83,6 +82,7 @@ class Strategy(BackTester):
         algoStartTime = time.time()
         print('\n started backtesting')
         while self.current_time != end_time:
+            self.load_prices()
             if(self.is_trading_date(self.current_time)): 
                 self.run_daily()
                 if(self.week_day == self.current_time.weekday()): 
@@ -112,7 +112,10 @@ class Strategy(BackTester):
         self.visualize()
         #save the log as a txt
     
-
+    def load_prices(self):
+        date = f'{self.current_time.year}-{self.current_time.month}-{self.current_time.day}'
+        self.prices = self.data[self.data['date'] == date]
+        
     def benchmark(self):
         '''
         returns benchmark data for statistic calculations in the form of a list. 
@@ -345,7 +348,7 @@ class Strategy(BackTester):
         return_differentials = np.array(return_differentials)
         expected_differential = np.mean(return_differentials)
         std = np.std(np.array(self.daily_gain_loss))
-        assert std==0, "Standard deviation is 0. Cannot compute ratio."
+        assert std!=0, "Standard deviation is 0. Cannot compute ratio."
         self.sharpe_ratio = expected_differential/std
         return True
 
@@ -378,17 +381,6 @@ class Strategy(BackTester):
         self.run_daily()
         self.on_market_close()
     
-    def handle_run_weekly(self):
-        '''
-        handler for run_weekly, to be called in back_testing()
-        '''
-        pass
-    
-    def handle_run_monthly(self):
-        '''
-        handler for run_monthly, to be called in back_testing()
-        '''
-        pass
 
     def place_order(self, stock_name, shares):
         '''
