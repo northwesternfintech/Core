@@ -4,7 +4,7 @@ A backtester provides a set of tools for estimating the future performance of a 
 
 # How to Use: 
 
-Users should first initialize the instance when they want to use it, and then they will have to overwrite some functions of the instance to implement a strategy (see more details below), and then they would be able to see the performance of the strategy by running the backtesting function with a time interval input. 
+Users should first initialize the instance when they want to use it, and then they will have to overwrite some functions of the instance to implement a strategy (see more details below). The performance of the strategy will be available after running the backtesting function with a time interval input. See below for a more detailed procedure.
 
     Step 1: Create instance
 
