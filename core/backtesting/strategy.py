@@ -1,8 +1,11 @@
 import matplotlib
+import matplotlib.pyplot as plt
 import pandas as pd
 import holidays
 import datetime
 import portfolio
+import numpy as np
+import time
 
 class BackTester:
     
@@ -44,6 +47,10 @@ class Strategy(BackTester):
 
         self.win_rate = 0
 
+        self.sharpe_ratio = 0
+        
+
+
         # list of total assets in a given day at open/open
         # index maps to index of self.dates
         self.total_daily_assets_open = [] 
@@ -69,6 +76,7 @@ class Strategy(BackTester):
         self.current_time = datetime.strptime(start, "%Y-%m-%d").date()
         end_time = datetime.strptime(end, "%Y-%m-%d").date()
         
+        algoStartTime = time.time()
         print('\n started backtesting')
         while self.current_time != end_time:
             if(self.is_trading_date(self.current_time)): 
@@ -78,9 +86,10 @@ class Strategy(BackTester):
                 if(self.month_day == self.current_time.day()): 
                     self.run_monthly()
                 self.current_time += datetime.timedelta(days=1)
+
             else:
                 self.current_time = self.next_nearest_trading_date()
-            pass
+        
 
             # Run daily/weekly/monthly
             
@@ -91,11 +100,22 @@ class Strategy(BackTester):
             # Increment self.curr_time
             
         # Calculate statistical data
+        # Calculating Sharpe Ratio
 
+        runtime = algoStartTime - time.time()
         print('\n finished backtesting, started visualizing')
-        
+        print('\n Runtime was %s seconds' % runtime)
         self.visualize()
+        #save the log as a txt
     
+
+    def benchmark(self):
+        '''
+        returns benchmark data for statistic calculations in the form of a list. 
+        Specifically returns the 'returns' of the benchmark for each day
+        '''
+        pass
+
     def log(self, msg, time): 
         '''
         This function logs every action that the strategy has taken, from
@@ -126,6 +146,11 @@ class Strategy(BackTester):
             pass
         if(plot_daily_returns):
             # plot self.daily_gain_loss vs self.dates with plt
+            # fig, ax = plt.subplots()
+            # ax.plot(self.dates, self.daily_gain_loss)
+            # ax.set_title("Daily Gain/Loss")
+            # ax.set_xlabel("Date")
+            # ax.set_ylabel("Gain/Loss")
             pass
 
         # ...
@@ -215,6 +240,20 @@ class Strategy(BackTester):
 
         return True
 
+    def calculate_sharpe_ratio(self) :
+        #E[Returns - Riskfree Returns]/standard deviation of excess return
+        #Benchmark/RiskReturns S&P
+        if len(self.daily_gain_loss)==0:
+            raise ValueError("Empty data for daily gain/loss")
+
+        assert len(self.daily_gain_loss)==len(self.benchmark()), "Number of benchmark values does not match number of values in daily gain/loss."
+        return_differentials = [returns - riskfree for returns, riskfree in zip(self.daily_gain_loss, self.benchmark())]
+        return_differentials = np.array(return_differentials)
+        expected_differential = np.mean(return_differentials)
+        std = np.std(np.array(self.daily_gain_loss))
+        assert std==0, "Standard deviation is 0. Cannot compute ratio."
+        self.sharpe_ratio = expected_differential/std
+        return True
 
     def is_trading_date(self, date):
         '''
