@@ -32,3 +32,21 @@ Users should first initialize the instance when they want to use it, and then th
 
 Once an instance is initialized and your strategies are implemented, a local dataframe of historical data will be loaded, and it simulates the historical trading environment in a loop that iterates through every trading day in the specified time interval. In each virtual day, buying and selling will be determined by the user specified strategies, and during the process a portfolio that contains all the virtual transactions made by the strategy will be created. After the simulation process, the backtester collects statistics (including winrate/sharpe/monthly gain/etc.) from the portfolio and present it to the users by generating both log files that sums up the performance and statistics and png files that contains the graphs.
 
+# Functions
+
+    Functions that the user should use:
+
+        init() # takes in transaction_cost (float), start_balance (float), week_day (integer), month_day (integer)
+        backtesting() # takes in start_time (string), end_time (string)
+
+    Functions that should be overrided by the user.
+
+        run_daily()
+        run_weekly()
+        run_monthly()
+
+# Statistical Output
+
+    Sharpe ratio: compares the return of an investment with its risk
+    Winrate: how many trades your strategy wins
+    Return: return of your strategy

@@ -101,7 +101,6 @@ class Strategy(BackTester):
             # append total amount of assets to self.total_daily_assets_close
 
             
-            # Increment self.curr_time
             
         # Calculate statistical data
         # Calculating Sharpe Ratio
@@ -109,7 +108,10 @@ class Strategy(BackTester):
         runtime = algoStartTime - time.time()
         print('\n finished backtesting, started visualizing')
         print('\n Runtime was %s seconds' % runtime)
-        self.visualize()
+        self.make_viz()
+        file_path = os.getcwd()
+        file_path = os.path.join(file_path, 'backtester')
+        self.make_log(file_path)
         #save the log as a txt
     
     def load_prices(self):
