@@ -1,4 +1,5 @@
 import cement
+import requests
 
 
 class WebSocketController(cement.Controller):
@@ -20,27 +21,32 @@ class WebSocketController(cement.Controller):
         print("Here are the avilable websockets!")
 
     @cement.ex(
-        help='starts websockets',
+        help='starts web sockets with tickers',
         arguments=[
-            (['--all'],
-             {'help': 'starts all websockets',
-              'dest': 'start_all',
-              'action': 'store_true'}),
-            (['websocket_names'],
-             {'help': 'name of websockets to start',
+            (['ticker_names'],
+             {'help': 'name of tickers to start',
               'metavar': 'names',
               'type': str,
-              'nargs': "*"})
+              'nargs': "+"})
         ]
     )
     def start(self) -> None:
-        if self.app.pargs.start_all and self.app.pargs.websocket_names:
-            raise ValueError("Conflicting websockets to start")
+        if not self.app.pargs.ticker_names:
+            print("Missing ticker names")
+            return
 
-        # TODO
+        path = f"{self.app.server_address}/web_sockets/start"
+        payload = {
+            "ticker_names": self.app.pargs.ticker_names
+        }
 
-        # Validate inputted names
-        # Start web sockets
+        res = requests.post(path, json=payload)
+        pid = res.text
+
+        if res.status_code == 200:
+            print(f"Started {self.app.pargs.ticker_names} at {pid}")
+        else:
+            print(f"Error: {res.text}")
 
     @cement.ex(
         help='stops websockets',
@@ -49,33 +55,70 @@ class WebSocketController(cement.Controller):
              {'help': 'stops all websockets',
               'dest': 'stop_all',
               'action': 'store_true'}),
-            (['websocket_names'],
-             {'help': 'name of websockets to stop',
-              'metavar': 'names',
+            (['pid'],
+             {'help': 'PID of websockets to stop',
               'type': str,
               'nargs': "*"})
         ]
     )
     def stop(self) -> None:
-        if self.app.pargs.stop_all and self.app.pargs.websocket_names:
-            raise ValueError("Conflicting websockets to stop")
+        if self.app.pargs.stop_all and self.app.pargs.pid:
+            print(f"Provided {self.app.pargs.pid} while using --all flag")
+            return
 
-        print(self.app.pargs)
+        if not self.app.pargs.stop_all and not self.app.pargs.pid:
+            print("Missing pid")
+            return
 
-        # TODO
-        # Validate inputted names
-        # Stop web sockets
+        path = ""
+        if self.app.pargs.stop_all:
+            path = f"{self.app.server_address}/web_sockets/stop_all"
+        else:
+            path = f"{self.app.server_address}/web_sockets/stop"
+
+        payload = {
+            "pid": self.app.pargs.pid
+        }
+
+        res = requests.post(path, json=payload)
+
+        if res.status_code == 200:
+            print(f"Stopped {self.app.pargs.pid}")
+        else:
+            print(f"Error: {res.text}")
 
     @cement.ex(
-        help='prints status of all websockts'
+        help='prints status of all websockts',
+        arguments=[
+            (['--clear'],
+             {'help': 'clears stopped/failed web sockets',
+              'dest': 'clear',
+              'action': 'store_true'})
+        ]
     )
     def status(self) -> None:
-        headers = ['Name', 'Status']
+        headers = ['PID', 'Ticker Names', 'Status']
         data = []
 
-        print(self.app.pargs)
+        if self.app.pargs.clear:
+            path = f"{self.app.server_address}/web_sockets/status/clear"
+            res = requests.get(path)
 
-        # TODO
-        # Actually get status data
+            if res.status_code != 200:
+                print(f"Error: {res.text}")
+                return
+
+        path = f"{self.app.server_address}/web_sockets/status/all"
+        res = requests.get(path)
+
+        if res.status_code != 200:
+            print(f"Error: {res.text}")
+            return
+
+        res_json = res.json()
+        for pid, pid_data in res_json.items():
+            ticker_names, status = pid_data
+
+            data.append([pid, ' '.join(ticker_names), status])
 
         self.app.render(data, headers=headers)

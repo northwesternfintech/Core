@@ -1,7 +1,7 @@
 import os
 import signal
 import subprocess
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Tuple
 
 from .status import WebSocketStatus
 
@@ -155,18 +155,23 @@ class WebSocketManager:
         self._update_status()
         return str(self._pid_status[pid])
 
-    def status_all(self) -> Dict[int, str]:
+    def status_all(self) -> Dict[int, Tuple[List[str], str]]:
         """Returns status of all active PIDs.
 
         Returns
         -------
-        pid_statuses : Dict[int, str]
-            Dictionary mapping PIDs to statuses.
+        pid_statuses : Dict[int, Tuple[List[str], str]]
+            Dictionary mapping PIDs to tickers running and 
+            web socket status.
         """
         pid_statuses = {}
 
-        for pid in self._running_pids:
-            pid_statuses[pid] = self.status(pid)
+        for pid in self._pid_status:
+            pid_tickers = []
+            if pid in self._running_pids:
+                pid_tickers = list(self._pid_tickers[pid])
+
+            pid_statuses[pid] = (pid_tickers, self.status(pid))
 
         return pid_statuses
 

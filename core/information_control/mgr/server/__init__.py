@@ -47,7 +47,7 @@ def start_web_sockets():
     try:
         pid = manager.web_sockets.start(ticker_names)
 
-        return pid, 200
+        return str(pid), 200
     except ValueError as _:
         return f"Failed to find tickers {ticker_names}", 404
     except Exception as e:
@@ -61,7 +61,7 @@ def stop_web_sockets():
 
     Request Parameters
     ------------------
-    web_socket_pid : str
+    pid : List[str]
         Pid of web socket to stop
 
     Returns
@@ -74,21 +74,23 @@ def stop_web_sockets():
         If PID name can't be found
     """
     request_params = request.json
-    pid = None
+    pids = None
 
     try:
-        pid = request_params["pid"]
+        pids = request_params["pid"]
     except KeyError:
         return "Missing field 'pid' in json", 400
 
-    if not pid:
+    if not pids:
         return "No PID provided", 400
 
     try:
-        manager.web_sockets.stop(pid)
+        for pid in pids:
+            try:
+                manager.web_sockets.stop(int(pid))
+            except ValueError as _:
+                return f"Failed to find PID {pid}", 404
         return '', 200
-    except ValueError as _:
-        return f"Failed to find PID {pid}", 404
     except Exception as e:
         return f"Manager returned error {e}", 500
 
@@ -124,13 +126,29 @@ def web_sockets_status_all():
 
     Returns
     -------
-    Dict[int, str], 200
+    Dict[int, Tuple[List[str], str]], 200
         If successfully retrieves web socket statuses
     500
         Manager error
     """
     try:
-        return manager.web_sockets.status_all, 200
+        return jsonify(manager.web_sockets.status_all())
+    except Exception as e:
+        return f"Manager returned error {e}", 500
+
+@app.route('/web_sockets/status/clear', methods=['GET'])
+def web_sockets_status_clear():
+    """Clears web socket status
+
+    Returns
+    -------
+    200
+        If successfully clears web socket statuses
+    500
+        Manager error
+    """
+    try:
+        return jsonify(manager.web_sockets.clear_status())
     except Exception as e:
         return f"Manager returned error {e}", 500
 

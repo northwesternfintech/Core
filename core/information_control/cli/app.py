@@ -2,9 +2,9 @@ import os
 
 import cement
 
-from controllers.backtest import BacktestController
-from controllers.base import BaseController
-from controllers.web_socket import WebSocketController
+from .controllers.backtest import BacktestController
+from .controllers.base import BaseController
+from .controllers.web_socket import WebSocketController
 
 DIR_HOME = os.path.expanduser('~')
 DIR_NUFT = os.path.join(DIR_HOME, '.nuft')
@@ -27,6 +27,7 @@ class CoreCLI(cement.App):
 
     def setup(self) -> None:
         super().setup()
+        self.server_address = "http://127.0.0.1:5000"
         # TODO: Add additional setup
 
 
