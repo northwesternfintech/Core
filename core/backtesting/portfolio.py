@@ -1,12 +1,13 @@
+from asset_trading_lib import asset
+
 class portfolio():
     
     def __init__(self, starting_balance=None, transaction_cost=None):
         
         self.balance = starting_balance or 10000
-        self.transaction_cost = transaction_cost or 0
-        self.transactions = []
-        self.holdings = [] # list of lists
-                           # each sublist contains two elements: [stock_name, amount_holding]
+        self.transaction_cost = transaction_cost or 0 # decimal percentage
+        self.transactions = [] # Consider changing this to a list of transaction objects
+        self.holdings = {} # Dictionary mapping name to asset object
 
     def get_balance(self): return self.balance
     
@@ -24,13 +25,13 @@ class portfolio():
         if shares > 0: # buy
             if self.balance >= stock_price*shares*(1+self.transaction_cost):
                 return True
-            else: 
-                return False
+
         else: # sell
-            for stock in self.holdings:
-                if stock[0] == stock_name: 
-                    return stock[1] >= abs(shares)
-            return False
+            if (self.holdings.has_key(stock_name)):
+                return self.holdings[stock_name].get_amount() >= abs(shares)
+
+        # If both conditions fail, then order is invalid
+        return False
             
         
     def place_order(self, stock_name, stock_price, shares): 
@@ -45,19 +46,29 @@ class portfolio():
         """
         if self.validate_order(stock_price, shares):
             if shares > 0:
-                self.transactions.append(['buy',stock_name, stock_price, shares])
+                self.transactions.append(['buy',stock_name, stock_price, shares, 0])
                 self.balance -= stock_price*shares*(1+self.transaction_cost)
-                for stock in self.holdings:
-                    if stock[0] == stock_name: 
-                        stock[1] += shares; return True 
-                self.holdings.append([stock_name, shares]); return True
+
+                if(not self.get_holdings().has_key(stock_name)):
+                    self.holdings[stock_name] = asset(stock_name)
+
+                self.holdings[stock_name].update_asset(amount=shares, price=stock_price)
+
+                return True
+
             elif shares < 0:
-                self.transactions.append(['sell',stock_name, stock_price, shares])
+                net = shares * (self.holdings[stock_name].get_average_price() - stock_price)
+                self.transactions.append(['sell',stock_name, stock_price, shares, net])
                 self.balance += stock_price*shares*(1-self.transaction_cost)
-                for stock in self.holdings:
-                    if stock[0] == stock_name: 
-                        stock[1] -= shares; return True 
-        else: return False 
+                
+                if(not self.get_holdings().has_key(stock_name)):
+                    self.holdings[stock_name] = asset(stock_name)
+
+                self.holdings[stock_name].update_asset(amount=shares, price=0)
+
+                return True
+                
+        return False 
             
             
                     
