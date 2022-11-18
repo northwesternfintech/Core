@@ -10,6 +10,8 @@ class portfolio():
         self.holdings = {} # Dictionary mapping name to asset object
 
     def get_balance(self): return self.balance
+
+    def get_transactions(self): return self.transactions
     
     def get_holdings(self): return self.holdings
     
