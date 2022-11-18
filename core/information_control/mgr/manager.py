@@ -51,7 +51,7 @@ class Manager:
             f"--address {self._address} "
             f"--pub_sub_ports {self._pub_port},{self._sub_port} "
         )
-        print(interchange_cmd)
+
         interchange_process = subprocess.Popen(interchange_cmd.split(), shell=False,
                                                start_new_session=True)
         self._interchange_pid = interchange_process.pid

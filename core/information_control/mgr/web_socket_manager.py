@@ -5,8 +5,6 @@ from typing import Dict, List, Set
 
 from .status import WebSocketStatus
 
-from .utils import find_open_port
-
 
 class WebSocketManager:
     """Manages the startup/status/shutdown of web sockets.
@@ -41,7 +39,7 @@ class WebSocketManager:
 
         self._pid_tickers: Dict[int, Set[str]] = {}
         self._pid_status: Dict[int, WebSocketStatus] = {}
-        self._pid_process: Dict[int] = {}
+        self._pid_process: Dict[int, subprocess.Popen] = {}
 
     def start(self, tickers: List[str]) -> int:
         """Takes a list of ticker names and starts a websocket to retrieve
@@ -80,9 +78,6 @@ class WebSocketManager:
 
         # TODO: Web socket level verification to ensure ticker names are valid tickers
 
-        # if not self._manager._pub_sub_port:
-        #     self._manager._pub_sub_port = find_open_port()
-
         # Start worker
         cmd = (
             f"web-socket-worker "
@@ -107,9 +102,7 @@ class WebSocketManager:
         return pid
 
     def stop(self, pid: int) -> None:
-        """Takes a list of web socket names and stops the appropriate
-        web sockets. Stopping web sockets should not affect any other
-        web sockets.
+        """Takes a PID of a web socket process and terminates it.
 
         Returns (not raises) error if given duplicate web sockets,
         invalid web sockets, or web sockets that are not running.
@@ -126,7 +119,7 @@ class WebSocketManager:
         """
         if pid not in self._running_pids:
             raise ValueError(f"{pid} is invalid or not running")
-        print(f"killing {pid}")
+
         os.kill(pid, signal.SIGTERM)
 
         self._manager._cur_worker_count -= 1
@@ -136,15 +129,15 @@ class WebSocketManager:
         self._pid_status[pid] = WebSocketStatus.STOPPED
         self._pid_process.pop(pid)
 
-    def status(self, pid: str) -> str:
-        """Takes name of web socket and returns the operational status.
+    def status(self, pid: int) -> str:
+        """Takes PID of web socket and returns the operational status.
 
-        Returns (not raises) error if given invalid web socket name.
+        Raises error if given invalid PID.
 
         Parameters
         ----------
-        socket_name : str
-            Name of web socket to get status of
+        pid : int
+            PID of web socket to get status of
 
         Returns
         -------
@@ -161,6 +154,21 @@ class WebSocketManager:
 
         self._update_status()
         return str(self._pid_status[pid])
+
+    def status_all(self) -> Dict[int, str]:
+        """Returns status of all active PIDs.
+
+        Returns
+        -------
+        pid_statuses : Dict[int, str]
+            Dictionary mapping PIDs to statuses.
+        """
+        pid_statuses = {}
+
+        for pid in self._running_pids:
+            pid_statuses[pid] = self.status(pid)
+
+        return pid_statuses
 
     def clear_status(self):
         """

@@ -13,66 +13,56 @@ def get_status():
     """
     return '', 204
 
-@app.route('/web_sockets/list', methods=['GET'])
-def list_web_sockets():
-    """
-    Returns a list of web socket names
-    """
-    web_socket_names = []
-    # TODO: Get web socket names
-    return jsonify(web_socket_names)
-
 
 @app.route('/web_sockets/start', methods=['POST'])
 def start_web_sockets():
-    """Starts web sockets. Validating web socket names is the
+    """Starts web socket. Validating ticker names is the
     responsibility of the Manager.
 
     Request Parameters
     ------------------
-    web_socket_names : List[str]
-        List of names of web sockets to start
+    ticker_names : List[str]
+        List of names of tickers to start
 
     Returns
     -------
     200
-        If successfully starts web sockets
+        If successfully starts web socket
     400
         If malformed inputs
     404
         If web socket name can't be found
     """
     request_params = request.json
-    print(request)
-    web_socket_names = []
+    ticker_names = []
 
     try:
-        web_socket_names = request_params["web_socket_names"]
+        ticker_names = request_params["ticker_names"]
     except KeyError:
-        print("HERE")
-        return 'key_error', 400 # TODO: Return custom error
+        return "Missing field 'ticker_names' in json", 400  # TODO: Return custom error
 
-    if not web_socket_names:
-        print("WHAT")
-        return 'no web sockets', 400
+    if not ticker_names:
+        return "No ticker names provided", 400
 
     try:
-        manager.web_sockets.start(web_socket_names)
+        pid = manager.web_sockets.start(ticker_names)
+
+        return pid, 200
+    except ValueError as _:
+        return f"Failed to find tickers {ticker_names}", 404
     except Exception as e:
-        print("OOF")
-        print(e)
-        return 'run error', 404 
+        return f"Manager returned error {e}", 500
 
 
 @app.route('/web_sockets/stop', methods=['POST'])
 def stop_web_sockets():
-    """Stops web sockets. Validating web socket names is the
+    """Stops web socket. Validating web socket PIDs is the
     responsibility of the Manager.
 
     Request Parameters
     ------------------
-    web_socket_names : List[str]
-        List of names of web sockets to stop
+    web_socket_pid : str
+        Pid of web socket to stop
 
     Returns
     -------
@@ -81,45 +71,68 @@ def stop_web_sockets():
     400
         If malformed inputs
     404
-        If web socket name can't be found
+        If PID name can't be found
     """
-    print("HI")
-    request_params = request.args
+    request_params = request.json
     pid = None
 
     try:
-        pid = request["pid"]
+        pid = request_params["pid"]
     except KeyError:
-        return ValueError(), 400 # TODO: Return custom error
+        return "Missing field 'pid' in json", 400
 
     if not pid:
-        return ValueError(), 400
+        return "No PID provided", 400
 
     try:
         manager.web_sockets.stop(pid)
+        return '', 200
+    except ValueError as _:
+        return f"Failed to find PID {pid}", 404
     except Exception as e:
-        print(e)
-        return ValueError(str(e)), 404 
-
-    return "nice"
+        return f"Manager returned error {e}", 500
 
 
-@app.route('/web_sockets/status/<string:web_socket_name>', methods=['GET'])
-def web_sockets_status(web_socket_name):
-    """Returns status of web socket
+@app.route('/web_sockets/status/<int:pid>', methods=['GET'])
+def web_sockets_status(pid):
+    """Returns status of PID
 
     Request Parameters
     ------------------
-    web_socket_name : str
-        Name of web socket to get status of
+    pid : str
+        PIDs of web socket to get status of
 
     Returns
     -------
+    str, 200
+        If successfully retrieves web socket status
+    404
+        If failed to find active PID
+    500
+        Manager error
     """    
     try:
-        return jsonify(manager.web_sockets.status(web_socket_name))
+        return manager.web_sockets.status(pid), 200
+    except ValueError as _:
+        return f"Failed to find PID {pid}", 404
     except Exception as e:
-        return ValueError(e), 500
+        return f"Manager returned error {e}", 500
+
+@app.route('/web_sockets/status/all', methods=['GET'])
+def web_sockets_status_all():
+    """Returns status of all active PIDs
+
+    Returns
+    -------
+    Dict[int, str], 200
+        If successfully retrieves web socket statuses
+    500
+        Manager error
+    """
+    try:
+        return manager.web_sockets.status_all, 200
+    except Exception as e:
+        return f"Manager returned error {e}", 500
 
 
 @app.route('/backtest/start', methods=['POST'])
@@ -141,6 +154,7 @@ def start_backtest():
     404
         If backtest name can't be found
     """
+    return "not implemented", 404
     request_params = request
     backtest_names = []
 
@@ -170,14 +184,11 @@ def backtest_status(web_socket_name):
     Returns
     -------
     """    
+    return "not implemented", 404
     try:
         return jsonify(manager.backtest.status(web_socket_name))
     except Exception as e:
         return ValueError(), 500
-
-@app.route("/", methods=["GET"])
-def stat():
-    return "Hello world!"
 
 
 def main():
