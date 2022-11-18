@@ -6,9 +6,14 @@ A backtester provides a set of tools for estimating the future performance of a 
 
 Users should first initialize the instance when they want to use it, and then they will have to overwrite some functions of the instance to implement a strategy (see more details below). The performance of the strategy will be available after running the backtesting function with a time interval input. See below for a more detailed procedure.
 
-    Step 1: Create instance
+    Step 1: Create instance and load dataset
 
-            my_strategy = Strategy(transaction_cost=0.0065, start_balance=10000, week_day=1, month_day=1)
+            Identify a local csv file file. You may use the data file stored in the repo if you do not have one. Then copy the absolute path of the file as an input for initializing the backtester, along with transaction cost, start balance. 
+
+            Note: weekdays and monthdays are explained in step 2. 
+
+            my_strategy = Strategy(transaction_cost=0.0065, start_balance=10000, week_day=1, month_day=1,
+                                        data_file_path = '/someuser/documents/data.csv')
 
     Step 2: Implement your strategy
 
@@ -52,6 +57,13 @@ Once an instance is initialized and your strategies are implemented, a local dat
 
                 start_time:     strings in the format of "yyyy-mm-dd" for start time
                 end_time:       strings in the format of "yyyy-mm-dd" for end time
+
+
+        place_order() -- handler for placing orders, this function should not be called directly.
+                         Instead, call this function in the run functions.
+
+                stock_name:     string representing the name of the stock
+                shares:         integer representing the number of stocks to buy/sell (negative for sell and positive for buy)
 
     Functions that should be overrided by the user.
 
