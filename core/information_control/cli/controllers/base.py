@@ -1,4 +1,6 @@
 import cement
+import requests
+import subprocess
 
 # TODO: Make ascii art banner
 BANNER = r"""
@@ -32,3 +34,26 @@ class BaseController(cement.Controller):
 
     def default(self) -> None:
         self.app.args.print_help()
+
+    @cement.ex()
+    def start(self) -> None:
+        """Starts manager server"""
+        cmd = (
+            "manager_server "
+        )
+
+        subprocess.Popen(cmd.split(), shell=False,
+                         start_new_session=True)
+
+    @cement.ex()
+    def shutdown(self) -> None:
+        """Shutsdown manager server"""
+        path = f"{self.app.server_address}/shutdown"
+        res = requests.post(path)
+
+        if res.status_code != 200:
+            print(f"Error: {res.text}")
+            return
+
+        print("Successfully shutdown server")
+

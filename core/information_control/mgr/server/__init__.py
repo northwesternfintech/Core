@@ -1,10 +1,17 @@
+import os
+import signal
+import threading
+import time
+import argparse
+import logging
+import sys
+
 from flask import Flask, jsonify, request
 
 from ..manager import Manager
 
 app = Flask(__name__)
 
-manager: Manager = Manager()
 
 @app.route('/status', methods=['GET'])
 def get_status():
@@ -12,6 +19,22 @@ def get_status():
     Checks whether server is healthy
     """
     return '', 204
+
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    """Shuts down manager and kills server"""
+    try:
+        manager.shutdown()
+    except Exception as e:
+        return f"Manager returned error {e}", 500
+
+    def self_destruct() -> None:
+        time.sleep(5)
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    threading.Thread(target=self_destruct).start()
+
+    return '', 200
 
 
 @app.route('/web_sockets/start', methods=['POST'])
@@ -136,7 +159,7 @@ def web_sockets_status_all():
     except Exception as e:
         return f"Manager returned error {e}", 500
 
-@app.route('/web_sockets/status/clear', methods=['GET'])
+@app.route('/web_sockets/status/clear', methods=['POST'])
 def web_sockets_status_clear():
     """Clears web socket status
 
@@ -209,6 +232,51 @@ def backtest_status(web_socket_name):
         return ValueError(), 500
 
 
-def main():
-    app.run(threaded=False, debug=False)
-    print("hello world")
+def cli_run():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--server-address", default='127.0.0.1',
+        help="Address to start server on"
+    )
+    parser.add_argument(
+        "--server-port", default=5000,
+        help="Port to start server on"
+    )
+    parser.add_argument(
+        "--manager-path",
+        help="Path to nuft folder for manager to use"
+    )
+    parser.add_argument(
+        "--interchange-address", default='127.0.0.1',
+        help="Address to start interchange on"
+    )
+    parser.add_argument(
+        "--interchange-pub-port", default=50001,
+        help="Pulish port for interchange"
+    )
+    parser.add_argument(
+        "--interchange-sub-port", default=50002,
+        help="Subscription port for interchange"
+    )
+    args = parser.parse_args()
+
+    global manager
+    manager = Manager(
+        path=args.manager_path,
+        address=args.interchange_address,
+        pub_port=args.interchange_pub_port,
+        sub_port=args.interchange_sub_port
+    )
+
+    out = open(os.devnull, 'w')
+
+    sys.stdout = out
+    sys.stderr = out
+
+    app.run(
+        host=args.server_address,
+        port=args.server_port,
+        threaded=False,
+        debug=False
+    )

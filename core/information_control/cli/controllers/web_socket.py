@@ -102,7 +102,7 @@ class WebSocketController(cement.Controller):
 
         if self.app.pargs.clear:
             path = f"{self.app.server_address}/web_sockets/status/clear"
-            res = requests.get(path)
+            res = requests.post(path)
 
             if res.status_code != 200:
                 print(f"Error: {res.text}")
