@@ -36,8 +36,22 @@ Once an instance is initialized and your strategies are implemented, a local dat
 
     Functions that the user should use:
 
-        init() # takes in transaction_cost (float), start_balance (float), week_day (integer), month_day (integer)
-        backtesting() # takes in start_time (string), end_time (string)
+        init() -- initialize the backtester instance, no output
+
+                transaction_cost: float that determines the cost of every transaction
+                start_balance: the balance that the strategy is starting with
+                
+                week_day:       every week, when it comes to the week_day specified, execute
+                                the run_weekly function. Default is Monday.
+                month_day:      every month, when it comes to the month_day specified, execute
+                                the run_monthly function. Default is 1st.
+
+
+        backtesting() -- simulate the trading environment and test the performance of the strategy.
+                         This function will output graphs and logs in a local directory called 'backtester'.
+
+                start_time:     strings in the format of "yyyy-mm-dd" for start time
+                end_time:       strings in the format of "yyyy-mm-dd" for end time
 
     Functions that should be overrided by the user.
 
