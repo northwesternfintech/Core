@@ -60,7 +60,7 @@ Once an instance is initialized and your strategies are implemented, a local dat
 
 
         place_order() -- handler for placing orders, this function should not be called directly.
-                         Instead, call this function in the run functions.
+                         Instead, call this function in the run functions when you implement your strategy.
 
                 stock_name:     string representing the name of the stock
                 shares:         integer representing the number of stocks to buy/sell (negative for sell and positive for buy)
