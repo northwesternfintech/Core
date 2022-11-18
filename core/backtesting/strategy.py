@@ -9,18 +9,10 @@ import portfolio
 import numpy as np
 import time
 
-class BackTester:
-    
-    def __init__(self, data_file_path=None):
-        # init a backtester, retrieve data from local file
-        # data are stored as a pd dataframe that has the following cols
-        # date; open; high; low; close; volume; Name
-        self._data_file_path = data_file_path or 'data/2013-2018.csv'
-        self.data = pd.read_csv(self._data_file_path)
                     
-class Strategy(BackTester):
+class Strategy():
     
-    def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None): 
+    def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None, data_file_path=None): 
         '''
         transaction_cost: float that determines the cost of every transaction
         start_balance: the balance that the strategy is starting with
@@ -39,7 +31,8 @@ class Strategy(BackTester):
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
-
+        self._data_file_path = data_file_path or '/Users/jialechen/Documents/GitHub/Core/core/backtesting/2013-2018.csv'
+        self.data = pd.read_csv(self._data_file_path)
         ###
         ### Parameters for storing statistical data for strategy
         ###
@@ -66,8 +59,6 @@ class Strategy(BackTester):
         self.week_day = week_day # Integer with monday as 0 and sunday as 6
         self.month_day = month_day # Number from 1 to 31
         
-        self.update_testing_data()
-
     def back_testing(self, start_time=None, end_time=None):
         '''
         back_testing takes in the start and end time, then proceed to 
@@ -83,42 +74,32 @@ class Strategy(BackTester):
         
         algoStartTime = time.time()
         print('\n started backtesting')
+        # print(self.current_time.day())
         while self.current_time != end_time:
             self.load_prices()
             if(self.is_trading_date(self.current_time)): 
                 self.run_daily()
                 if(self.week_day == self.current_time.weekday()): 
                     self.run_weekly()
-                if(self.month_day == self.current_time.day()): 
+                if(self.month_day == self.current_time.day): 
                     self.run_monthly()
-                self.current_time += datetime.timedelta(days=1)
-
+                self.update_testing_data()
+                self.current_time += timedelta(days=1)
             else:
-                self.current_time = self.next_nearest_trading_date()
+                self.current_time = self.next_nearest_trading_date(self.current_time)
         
-
-            # Run daily/weekly/monthly
-            
-            # append total amount of assets to self.total_daily_assets_open
-            # append total amount of assets to self.total_daily_assets_close
-
-            
-            
-        # Calculate statistical data
-        # Calculating Sharpe Ratio
-
-        runtime = algoStartTime - time.time()
+        self.calculate_daily_gain_loss()
+        runtime = time.time() - algoStartTime
         print('\n finished backtesting, started visualizing')
         print('\n Runtime was %s seconds' % runtime)
         self.make_viz()
         file_path = os.getcwd()
         file_path = os.path.join(file_path, 'backtester')
         self.make_log(file_path)
-        #save the log as a txt
     
     def load_prices(self):
         date = f'{self.current_time.year}-{self.current_time.month}-{self.current_time.day}'
-        self.prices = self.data[self.data['date'] == date]
+        self.data = self.data[self.data['date'] == date]
         
     def benchmark(self):
         '''
@@ -213,7 +194,8 @@ class Strategy(BackTester):
         '''
         Creates PNGs of plots given the data and axis.
         '''
-            
+        # print(x_data)
+        # print(y_data)
         # date_time = self.dates
         # date_time = pd.to_datetime(date_time)
 
@@ -265,7 +247,7 @@ class Strategy(BackTester):
         balance = self.portfolio.get_balance() # current balance of the portfolio
         holdings = self.portfolio.get_holdings() # current holdings of the portfolio
         
-        data = self.data # pandas dataframe of stock data
+        data = self.prices # pandas dataframe of stock data
 
         for h in holdings:
 
@@ -283,11 +265,13 @@ class Strategy(BackTester):
         '''
         Calculate the daily gain/loss based from open-close (daily gain/loss = (close - open) / open)
         '''
-
+        # print(f'assents open length is {len(self.total_daily_assets_open)}')
         day_open = self.total_daily_assets_open
         day_close = self.total_daily_assets_close
-
+        # print(len(day_close))
+        # print(len(day_open))
         # Calculate the daily gain/loss for each day
+        self.daily_gain_loss = [0]*len(day_close)
         for i in range(len(self.total_daily_assets_open)):
             self.daily_gain_loss[i] = (day_close[i] - day_open[i]) / day_open[i]
 
@@ -461,3 +445,6 @@ class Strategy(BackTester):
         If date specified is not a trading date, then find the next nearest trading date
         '''
         pass
+
+# s = Strategy(transaction_cost=0.05,start_balance=10000)
+# s.back_testing()
