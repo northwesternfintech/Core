@@ -31,7 +31,7 @@ class Strategy():
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
-        self._data_file_path = data_file_path or '/Users/jialechen/Documents/GitHub/Core/core/backtesting/2013-2018.csv'
+        self._data_file_path = data_file_path or '2013-2018.csv'
         self.data = pd.read_csv(self._data_file_path)
         ###
         ### Parameters for storing statistical data for strategy
