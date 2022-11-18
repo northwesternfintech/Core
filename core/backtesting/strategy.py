@@ -65,6 +65,8 @@ class Strategy(BackTester):
 
         self.week_day = week_day # Integer with monday as 0 and sunday as 6
         self.month_day = month_day # Number from 1 to 31
+        
+        self.update_testing_data()
 
     def back_testing(self, start_time=None, end_time=None):
         '''
