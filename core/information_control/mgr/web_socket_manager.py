@@ -1,9 +1,14 @@
 import os
 import signal
 import subprocess
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Union
+import logging
+import psutil
+import time
 
 from .status import WebSocketStatus
+
+logger = logging.getLogger(__name__)
 
 
 class WebSocketManager:
@@ -85,8 +90,8 @@ class WebSocketManager:
             f"--port {self._manager._pub_port} "
             f"--tickers {' '.join(tickers)} "
         )
-        print(cmd)
-        process = subprocess.Popen(cmd.split(), shell=False, 
+
+        process = subprocess.Popen(cmd.split(), shell=False,
                                    start_new_session=True)
         pid = process.pid
 
@@ -129,7 +134,7 @@ class WebSocketManager:
         self._pid_status[pid] = WebSocketStatus.STOPPED
         self._pid_process.pop(pid)
 
-    def status(self, pid: int) -> str:
+    def status(self, pid: int) -> Dict[str, Union[List[str], str]]:
         """Takes PID of web socket and returns the operational status.
 
         Raises error if given invalid PID.
@@ -141,8 +146,8 @@ class WebSocketManager:
 
         Returns
         -------
-        str
-            Returns PID status
+        status_dict : Dict[int, Dict[str, Union[List[str], str]]]
+            Dictionary containing "ticker" and "status" of PID.
 
         Raises
         ------
@@ -153,25 +158,29 @@ class WebSocketManager:
             raise ValueError(f"Unknown PID {pid}")
 
         self._update_status()
-        return str(self._pid_status[pid])
 
-    def status_all(self) -> Dict[int, Tuple[List[str], str]]:
+        status_dict = {}
+
+        if pid in self._running_pids:
+            status_dict['tickers'] = list(self._pid_tickers[pid])
+
+        status_dict['status'] = str(self._pid_status[pid].value)
+
+        return status_dict
+
+    def status_all(self) -> Dict[int, Dict[str, Union[List[str], str]]]:
         """Returns status of all active PIDs.
 
         Returns
         -------
-        pid_statuses : Dict[int, Tuple[List[str], str]]
-            Dictionary mapping PIDs to tickers running and 
-            web socket status.
+        pid_statuses : Dict[int, Dict[str, Union[List[str], str]]]
+            Dictionary mapping PIDs to dictionary containing
+            "ticker" and "status".
         """
         pid_statuses = {}
 
         for pid in self._pid_status:
-            pid_tickers = []
-            if pid in self._running_pids:
-                pid_tickers = list(self._pid_tickers[pid])
-
-            pid_statuses[pid] = (pid_tickers, self.status(pid))
+            pid_statuses[pid] = self.status(pid)
 
         return pid_statuses
 
@@ -204,6 +213,13 @@ class WebSocketManager:
             self._pid_tickers.pop(pid)
             self._pid_status[pid] = WebSocketStatus.FAILED
             self._pid_process.pop(pid)
+
+    def shutdown(self):
+        """Stops all running web sockets. Object should not
+        be used again after calling this method"""
+        for pid in self._running_pids.copy():
+            self.stop(pid)
+
 
 
 def main():

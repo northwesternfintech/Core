@@ -119,7 +119,8 @@ class WebSocketController(cement.Controller):
 
         res_json = res.json()
         for pid, pid_data in res_json.items():
-            ticker_names, status = pid_data
+            ticker_names = pid_data['tickers']
+            status = pid_data['status']
 
             data.append([pid, ' '.join(ticker_names), status])
 

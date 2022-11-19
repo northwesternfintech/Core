@@ -24,12 +24,14 @@ def get_status():
     """
     return '', 204
 
+
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
     """Shuts down manager and kills server"""
     try:
         manager.shutdown()
     except Exception as e:
+        logger.exception("Manager failed to shutdown")
         return f"Manager returned error {e}", 500
 
     def self_destruct() -> None:
@@ -77,10 +79,11 @@ def start_web_sockets():
         pid = manager.web_sockets.start(ticker_names)
 
         return str(pid), 200
-    except ValueError as _:
+    except ValueError:
         return f"Failed to find tickers {ticker_names}", 404
     except Exception as e:
-        return f"Manager returned error {e}", 500
+        logger.exception("Manager failed to start web sockets:")
+        return str(e), 500
 
 
 @app.route('/web_sockets/stop', methods=['POST'])
@@ -111,18 +114,18 @@ def stop_web_sockets():
         return "Missing field 'pid' in json", 400
 
     if not pids:
-        return "No PID provided", 400, 
+        return "No PID provided", 400
 
+    for pid in pids:
+        try:
+            manager.web_sockets.stop(int(pid))
+        except ValueError:
+            return f"Failed to find PID {pid}", 404
+        except Exception as e:
+            logger.exception(f"Manager failed to stop {pid}")
+            return str(e), 500
 
-    try:
-        for pid in pids:
-            try:
-                manager.web_sockets.stop(int(pid))
-            except ValueError as _:
-                return f"Failed to find PID {pid}", 404
-        return '', 200
-    except Exception as e:
-        return f"Manager returned error {e}", 500
+    return '', 200
 
 
 @app.route('/web_sockets/status/<int:pid>', methods=['GET'])
@@ -145,10 +148,12 @@ def web_sockets_status(pid):
     """    
     try:
         return manager.web_sockets.status(pid), 200
-    except ValueError as _:
+    except ValueError:
         return f"Failed to find PID {pid}", 404
     except Exception as e:
-        return f"Manager returned error {e}", 500
+        logger.exception(f"Manager failed to retrieve web socket status of {pid}")
+        return str(e), 500
+
 
 @app.route('/web_sockets/status/all', methods=['GET'])
 def web_sockets_status_all():
@@ -164,7 +169,9 @@ def web_sockets_status_all():
     try:
         return jsonify(manager.web_sockets.status_all())
     except Exception as e:
-        return f"Manager returned error {e}", 500
+        logger.exception("Manager failed to retrieve all web socket statuses")
+        return str(e), 500
+
 
 @app.route('/web_sockets/status/clear', methods=['POST'])
 def web_sockets_status_clear():
@@ -180,7 +187,8 @@ def web_sockets_status_clear():
     try:
         return jsonify(manager.web_sockets.clear_status())
     except Exception as e:
-        return f"Manager returned error {e}", 500
+        logger.exception("Manager failed to clear web socket status")
+        return str(e), 500
 
 
 @app.route('/backtest/start', methods=['POST'])
@@ -303,17 +311,22 @@ def cli_run():
     manager_file_handler.setLevel(logging.INFO)
     manager_file_handler.setFormatter(formatter)
 
-    manager_logger = logging.getLogger('core.information_control.mgr.manager')
+    manager_logger = logging.getLogger('core.information_control.mgr')
     manager_logger.setLevel(logging.DEBUG)
     manager_logger.addHandler(manager_file_handler)
 
     global manager
-    manager = Manager(
-        path=args.manager_path,
-        address=args.interchange_address,
-        pub_port=args.interchange_pub_port,
-        sub_port=args.interchange_sub_port
-    )
+
+    try:
+        manager = Manager(
+            path=args.manager_path,
+            address=args.interchange_address,
+            pub_port=args.interchange_pub_port,
+            sub_port=args.interchange_sub_port
+        )
+    except:
+        logger.exception("Manager failed to start")
+        return
 
     out = open(os.devnull, 'w')
 

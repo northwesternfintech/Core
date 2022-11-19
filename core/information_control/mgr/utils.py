@@ -48,4 +48,4 @@ def print_cli_error(text):
         _description_
     """
     error_text = colored("ERROR: ", color='red', attrs=['bold'])
-    print(error_text + text)
+    print(error_text + text + "\n\nSee logs for more details")

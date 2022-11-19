@@ -5,6 +5,7 @@ import subprocess
 import time
 from typing import Optional
 import logging
+import psutil
 
 from .backtest_manager import BacktestManager
 from .web_socket_manager import WebSocketManager
@@ -55,15 +56,18 @@ class Manager:
             f"--pub_sub_ports {self._pub_port},{self._sub_port} "
         )
 
-        interchange_process = subprocess.Popen(interchange_cmd.split(), shell=False,
-                                               start_new_session=True)
-        self._interchange_pid = interchange_process.pid
+        try:
+            self._interchange_pid = subprocess.Popen(interchange_cmd.split(),
+                                                     shell=False,
+                                                     start_new_session=True).pid
+        except Exception as e:
+            logger.exception(f"Failed to start interchange with command {interchange_cmd}")
+            raise e
 
     def shutdown(self):
-        """Deallocates all necessary resources. No manager operations 
+        """Deallocates all necessary resources. No manager operations
         should be done after calling this function."""
-        for pid in self.web_sockets._running_pids.copy():
-            self.web_sockets.stop(pid)
+        self.web_sockets.shutdown()
 
         time.sleep(1)  # Delay to allow termination messsages to send
         os.kill(self._interchange_pid, signal.SIGTERM)
