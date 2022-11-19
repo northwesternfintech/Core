@@ -8,7 +8,6 @@ from .controllers.web_socket import WebSocketController
 
 DIR_HOME = os.path.expanduser('~')
 DIR_NUFT = os.path.join(DIR_HOME, '.nuft')
-# DIR_LOG = os.path.join(DIR_NUFT, 'logs')
 
 
 class CoreCLI(cement.App):
@@ -60,9 +59,16 @@ class CoreCLI(cement.App):
             self.config.remove_section(section)
 
         self.nuft_dir = os.path.join(DIR_HOME, '.nuft')
-        self.conf_path = os.path.join(self.nuft_dir, "config.ini")
+        self.log_path = os.path.join(self.nuft_dir, 'logs')
+
+        if not os.path.exists(self.nuft_dir):
+            os.mkdir(self.nuft_dir)
+
+        if not os.path.exists(self.log_path):
+            os.mkdir(self.log_path)
 
         self.config.read_dict(self._meta.config_defaults)
+        self.conf_path = os.path.join(self.nuft_dir, "config.ini")
 
         if not os.path.exists(self.conf_path):
             with open(self.conf_path, 'w') as f:

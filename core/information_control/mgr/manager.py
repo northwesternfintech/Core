@@ -4,9 +4,12 @@ import signal
 import subprocess
 import time
 from typing import Optional
+import logging
 
 from .backtest_manager import BacktestManager
 from .web_socket_manager import WebSocketManager
+
+logger = logging.getLogger(__name__)
 
 __all__ = ('Manager',)
 

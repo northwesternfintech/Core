@@ -4,11 +4,15 @@ import threading
 import time
 import argparse
 import logging
+import logging.handlers
 import sys
+import datetime
 
 from flask import Flask, jsonify, request
 
 from ..manager import Manager
+
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -29,7 +33,9 @@ def shutdown():
         return f"Manager returned error {e}", 500
 
     def self_destruct() -> None:
-        time.sleep(5)
+        for i in range(3, -1, -1):
+            logger.info(f"Killing server in {i}...")
+            time.sleep(1)
         os.kill(os.getpid(), signal.SIGTERM)
 
     threading.Thread(target=self_destruct).start()
@@ -261,6 +267,45 @@ def cli_run():
         help="Subscription port for interchange"
     )
     args = parser.parse_args()
+
+    log_dir = os.path.join(args.manager_path, "logs")
+    server_log_dir = os.path.join(log_dir, 'server')
+    manager_log_dir = os.path.join(log_dir, 'manager')
+
+    if not os.path.exists(server_log_dir):
+        os.mkdir(server_log_dir)
+
+    if not os.path.exists(manager_log_dir):
+        os.mkdir(manager_log_dir)
+
+    now = datetime.datetime.now()
+    server_log_path = now.strftime('%Y-%m-%d') + '.log'
+    server_log_path = os.path.join(server_log_dir, server_log_path)
+
+    flask_file_handler = logging.FileHandler(filename=server_log_path, mode='a')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    flask_file_handler.setLevel(logging.INFO)
+    flask_file_handler.setFormatter(formatter)
+
+    flask_logger = logging.getLogger('werkzeug')
+    flask_logger.setLevel(logging.INFO)
+    flask_logger.addHandler(flask_file_handler)
+
+    server_logger = logging.getLogger('core.information_control.mgr.server')
+    server_logger.setLevel(logging.INFO)
+    server_logger.addHandler(flask_file_handler)
+
+    manager_log_path = now.strftime('%Y-%m-%d') + '.log'
+    manager_log_path = os.path.join(manager_log_dir, manager_log_path)
+
+    manager_file_handler = logging.FileHandler(filename=manager_log_path, mode='a')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    manager_file_handler.setLevel(logging.INFO)
+    manager_file_handler.setFormatter(formatter)
+
+    manager_logger = logging.getLogger('core.information_control.mgr.manager')
+    manager_logger.setLevel(logging.DEBUG)
+    manager_logger.addHandler(manager_file_handler)
 
     global manager
     manager = Manager(
