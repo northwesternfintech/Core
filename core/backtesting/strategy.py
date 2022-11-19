@@ -12,7 +12,9 @@ import time
                     
 class Strategy():
     
-    def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None, data_file_path=None): 
+    def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None, 
+                 data_file_path=None,
+                 benchmark_file_path=None): 
         '''
         transaction_cost: float that determines the cost of every transaction
         start_balance: the balance that the strategy is starting with
@@ -36,7 +38,10 @@ class Strategy():
         ###
         ### Parameters for storing statistical data for strategy
         ###
-
+        self.benchmark_file_path = benchmark_file_path or 'US10yrsbond.csv'
+        self.benchmark_df = pd.read_csv(self.benchmark_file_path)
+        self.benchmark_df['date'] = pd.to_datetime(self.benchmark_df['Date'])
+        self.benchmark = []
         self.winning_action = 0
         self.total_action = 0
 
@@ -69,12 +74,13 @@ class Strategy():
         start = start_time or '2013-03-28'
         end = end_time or '2018-02-05'
 
+        self.start_time = start
+        self.end_time = end
         self.current_time = datetime.strptime(start, "%Y-%m-%d").date()
         end_time = datetime.strptime(end, "%Y-%m-%d").date()
         
         algoStartTime = time.time()
         print('\n started backtesting')
-        # print(self.current_time.day())
         while self.current_time != end_time:
             self.load_prices()
             if(self.is_trading_date(self.current_time)): 
@@ -85,28 +91,26 @@ class Strategy():
                     self.run_monthly()
                 self.update_testing_data()
                 self.current_time += timedelta(days=1)
+                self.benchmark.append(
+                    self.benchmark_df[self.benchmark_df['date']==self.current_time]['Open'])
             else:
                 self.current_time = self.next_nearest_trading_date(self.current_time)
         
         self.calculate_daily_gain_loss()
+
+        self.calculate_win_rate()
+        self.calculate_sharpe_ratio()
+        
         runtime = time.time() - algoStartTime
         print('\n finished backtesting, started visualizing')
         print('\n Runtime was %s seconds' % runtime)
         self.make_viz()
         file_path = os.getcwd()
         file_path = os.path.join(file_path, 'backtester')
-        self.make_log(file_path)
     
     def load_prices(self):
         date = f'{self.current_time.year}-{self.current_time.month}-{self.current_time.day}'
         self.data = self.data[self.data['date'] == date]
-        
-    def benchmark(self):
-        '''
-        returns benchmark data for statistic calculations in the form of a list. 
-        Specifically returns the 'returns' of the benchmark for each day
-        '''
-        pass
 
     def log(self, msg, time): 
         '''
@@ -136,7 +140,7 @@ class Strategy():
 
         pass
 
-    def make_viz(self, directory='backtester', plot_total_assets=True, plot_daily_returns=True, plot_monthly_returns=True, plot_win_rate=True): 
+    def make_viz(self, directory='backtester', plot_total_assets=True, plot_daily_returns=True, plot_monthly_returns=False, plot_win_rate=True): 
         '''
         Creates directory to save figures and logs for the back test
         '''
@@ -150,7 +154,7 @@ class Strategy():
         try:
             os.makedirs(file_path)
         except OSError as error:
-            print("Could not create directory:", error)
+            print("directory already exists", error)
 
         # Make Transaction Log
         self.make_log(file_path)
@@ -165,7 +169,7 @@ class Strategy():
             # plot self.daily_gain_loss vs self.dates with create_plot()
             self.make_plot(x_data=self.dates, y_data=self.daily_gain_loss, file_path=file_path,
                             xlabel='Dates', ylabel='Percentage Change Assets', 
-                            title=f'{self.current_time.strftime("%Y-%m-%d")}_daily_gain_loss')
+                            title=f'{self.current_time.strftime("%Y-%m-%d")}_daily_return')
 
         if(plot_monthly_returns):
             # plot self.daily_gain_loss vs self.dates with create_plot()
@@ -179,15 +183,16 @@ class Strategy():
         '''
         Creates a text file containing a log of the transactions of portfolio
         '''
-
         transactions = self.portfolio.get_transactions()
-
-        with open(file_path + 'transactions_log.txt', 'w') as f:
+        with open(file_path + '/transactions_log.txt', 'w+') as f:
             for i in range(len(transactions)):
                 line = transactions[i]
                 f.write(line[0], line[1], line[2], line[3])
                 f.write('\n')
-
+                
+        with open(file_path + '/statistics.txt', 'w+') as f:
+            f.write(f'The winrate of your strategy over the time interval of ({self.start_time},{self.end_time}) is {self.win_rate}\n')
+            f.write(f'The sharpe ratio is {self.sharpe_ratio}\n')
         return
 
     def make_plot(self, x_data, y_data, title, xlabel, ylabel, file_path): 
@@ -213,7 +218,7 @@ class Strategy():
         plot_name = f'{file_path}/{title}_plot.png'
 
         plt.savefig(plot_name)
-
+        plt.clf()
         return
 
     def update_testing_data(self):
@@ -265,11 +270,8 @@ class Strategy():
         '''
         Calculate the daily gain/loss based from open-close (daily gain/loss = (close - open) / open)
         '''
-        # print(f'assents open length is {len(self.total_daily_assets_open)}')
         day_open = self.total_daily_assets_open
         day_close = self.total_daily_assets_close
-        # print(len(day_close))
-        # print(len(day_open))
         # Calculate the daily gain/loss for each day
         self.daily_gain_loss = [0]*len(day_close)
         for i in range(len(self.total_daily_assets_open)):
@@ -320,7 +322,9 @@ class Strategy():
         
         self.total_action = total_action_count # Update the total_action parameter in strategy
         self.winnning_action = winning_action_count # update the wining_action parameter in strategy
-
+        
+        if self.total_action == 0: return None # stop if no action has been made
+        
         self.win_rate = winning_action_count / total_action_count # Update the win_rate parameter in strategy
 
         return True
@@ -331,12 +335,18 @@ class Strategy():
         if len(self.daily_gain_loss)==0:
             raise ValueError("Empty data for daily gain/loss")
 
-        assert len(self.daily_gain_loss)==len(self.benchmark()), "Number of benchmark values does not match number of values in daily gain/loss."
-        return_differentials = [returns - riskfree for returns, riskfree in zip(self.daily_gain_loss, self.benchmark())]
+        # update benchmark every virtual day
+        assert len(self.daily_gain_loss)==len(self.benchmark), "Number of benchmark values does not match number of values in daily gain/loss."
+        
+        return_differentials = [0]*len(self.daily_gain_loss)
+        for i in range(len(self.daily_gain_loss)):
+            return_differentials[i] = self.daily_gain_loss[i] - self.benchmark[i]
         return_differentials = np.array(return_differentials)
         expected_differential = np.mean(return_differentials)
         std = np.std(np.array(self.daily_gain_loss))
-        assert std!=0, "Standard deviation is 0. Cannot compute ratio."
+        if std == 0: 
+            self.sharpe_ratio = 0
+            return False
         self.sharpe_ratio = expected_differential/std
         return True
 
@@ -445,6 +455,8 @@ class Strategy():
         If date specified is not a trading date, then find the next nearest trading date
         '''
         pass
-
-# s = Strategy(transaction_cost=0.05,start_balance=10000)
-# s.back_testing()
+    
+benchmark = '/Users/jialechen/Documents/GitHub/Core/core/backtesting/US10yrsbond.csv'
+path = '/Users/jialechen/Documents/GitHub/Core/core/backtesting/2013-2018.csv'
+s = Strategy(transaction_cost=0.05,start_balance=10000,data_file_path=path, benchmark_file_path=benchmark)
+s.back_testing()
