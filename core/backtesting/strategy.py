@@ -91,8 +91,10 @@ class Strategy():
                     self.run_monthly()
                 self.update_testing_data()
                 self.current_time += timedelta(days=1)
+                today = self.benchmark_df[self.benchmark_df['date']==self.current_time]
                 self.benchmark.append(
-                    self.benchmark_df[self.benchmark_df['date']==self.current_time]['Open'])
+                    today['Open']
+                    )
             else:
                 self.current_time = self.next_nearest_trading_date(self.current_time)
         
@@ -169,14 +171,18 @@ class Strategy():
             # plot self.daily_gain_loss vs self.dates with create_plot()
             self.make_plot(x_data=self.dates, y_data=self.daily_gain_loss, file_path=file_path,
                             xlabel='Dates', ylabel='Percentage Change Assets', 
-                            title=f'{self.current_time.strftime("%Y-%m-%d")}_daily_return')
+                            title=f'{self.current_time.strftime("%Y-%m-%d")}_daily_return',
+                            plot_together = self.benchmark)
 
         if(plot_monthly_returns):
             # plot self.daily_gain_loss vs self.dates with create_plot()
             self.make_plot(x_data=self.monthly_gain_loss['dates'], y_data=self.monthly_gain_loss['gain_loss'], file_path=file_path,
                             xlabel='Dates', ylabel='Percentage Change Assets', 
                             title=f'{self.current_time.strftime("%Y-%m-%d")}_monthly_gain_loss')
-
+        # print(self.benchmark)
+        # self.make_plot(x_data=self.dates, y_data=self.benchmark, file_path=file_path,
+        #                     xlabel='Dates', ylabel='10 yr bond price', 
+        #                     title=f'{self.current_time.strftime("%Y-%m-%d")} 10 yr bond')
         return
 
     def make_log(self, file_path): 
@@ -195,7 +201,7 @@ class Strategy():
             f.write(f'The sharpe ratio is {self.sharpe_ratio}\n')
         return
 
-    def make_plot(self, x_data, y_data, title, xlabel, ylabel, file_path): 
+    def make_plot(self, x_data, y_data, title, xlabel, ylabel, file_path, plot_together = False): 
         '''
         Creates PNGs of plots given the data and axis.
         '''
@@ -204,18 +210,20 @@ class Strategy():
         # date_time = self.dates
         # date_time = pd.to_datetime(date_time)
 
-        df = pd.DataFrame()
-        df['x'] = x_data
-        df['y'] = y_data
-        df = df.set_index('x')
-        plt.plot(df)
+        plt.plot(x_data,y_data)
 
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title(title)
-        plt.legend()
 
         plot_name = f'{file_path}/{title}_plot.png'
+
+        if plot_together != False:
+            # print('plotted')
+            plt.plot(x_data, plot_together,'r')
+
+            
+        plt.legend()
 
         plt.savefig(plot_name)
         plt.clf()
