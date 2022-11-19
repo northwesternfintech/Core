@@ -1,6 +1,7 @@
 import os
 
 import cement
+import configparser
 
 from .controllers.backtest import BacktestController
 from .controllers.base import BaseController
@@ -16,18 +17,51 @@ class CoreCLI(cement.App):
         label = "nuft"
         extensions = ['tabulate']
         output_handler = 'tabulate'
-        config_files = [
-            os.path.join(DIR_NUFT, "creds.conf")
-        ]
         handlers = [
             BaseController,
             WebSocketController,
             BacktestController
         ]
 
+        config_files = [
+            os.path.join(DIR_NUFT, "config.conf")
+        ]
+
+        config_defaults = {
+            'server': {
+                'host': '127.0.0.1',
+                'port': 5000
+            },
+            'interchange': {
+                'host': '127.0.0.1',
+                'pub_port': 50001,
+                'sub_port': 50002
+            },
+            'paths': {
+            }
+        }
+
     def setup(self) -> None:
         super().setup()
-        self.server_address = "http://127.0.0.1:5000"
+
+        for section in self.config.get_sections():
+            self.config.remove_section(section)
+
+        self.nuft_dir = os.path.join(DIR_HOME, '.nuft')
+        self.conf_path = os.path.join(self.nuft_dir, "config.conf")
+
+        self.config.read_dict(self._meta.config_defaults)
+
+        if not os.path.exists(self.conf_path):
+            with open(self.conf_path, 'w') as f:
+                self.config.write(f)
+        else:
+            with open(self.conf_path, 'r') as f:
+                self.config.read_file(f)
+
+        server_host = self.config.get('server', 'host')
+        server_port = self.config.get('server', 'port')
+        self.server_address = f"http://{server_host}:{server_port}"
         # TODO: Add additional setup
 
 

@@ -19,8 +19,8 @@ class WebSocketManager:
         Map of PIDs to set of tickers the process is running
     self._pid_status : Dict[str, WebSocketStatus]
         Map of PIDs to process status
-    self._async_tasks : Dict[str]
-        Map of PIDs to cancellable async routine
+    self._pid_process : Dict[int, subprocess.Popen]
+        Map of PIDs to processes
     """
     def __init__(self,
                  manager: 'Manager'):

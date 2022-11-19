@@ -1,6 +1,8 @@
 import socket
 import random
 
+from typing import List
+
 
 def is_port_in_use(port: int) -> bool:
     """Determines whether a given port is in use on this machine.
@@ -11,25 +13,25 @@ def is_port_in_use(port: int) -> bool:
         return sock.connect_ex(('localhost', port)) == 0
 
 
-def find_open_port(port_range=(50000, 60000), max_tries=100) -> int:
-    """Finds an open port to use on this machine.
+def find_open_ports(num_ports) -> List[int]:
+    """Finds an open port to use on this machines.
 
     Parameters
     ----------
-    port_range : tuple, optional
-        Range of ports to check, by default (50000, 60000)
-    max_tries : int, optional
-        Numer of times to try to find an open port, by default 100
+    num_ports : int
+        Number of ports to find.
 
     Returns
     -------
-    int
-        An available port.
+    List[int]
+        List of available ports.
     """
-    for i in range(max_tries):
-        port_to_check = random.randint(port_range[0], port_range[1])
+    free_ports = []
+    for i in range(num_ports):
+        sock = socket.socket()
+        sock.bind(('', 0))
+        free_ports.append(sock.getsockname()[1])
 
-        if not is_port_in_use(port_to_check):
-            return port_to_check
+        sock.close()
 
-    raise ValueError("Failed to find an open port")
+    return free_ports
