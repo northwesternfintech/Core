@@ -1,6 +1,8 @@
 import cement
 import requests
 
+from ...mgr.utils import print_cli_error
+
 
 class WebSocketController(cement.Controller):
     class Meta:
@@ -32,7 +34,7 @@ class WebSocketController(cement.Controller):
     )
     def start(self) -> None:
         if not self.app.pargs.ticker_names:
-            print("Missing ticker names")
+            print_cli_error("Missing ticker names")
             return
 
         path = f"{self.app.server_address}/web_sockets/start"
@@ -46,7 +48,7 @@ class WebSocketController(cement.Controller):
         if res.status_code == 200:
             print(f"Started {self.app.pargs.ticker_names} at {pid}")
         else:
-            print(f"Error: {res.text}")
+            print_cli_error(res.text)
 
     @cement.ex(
         help='stops websockets',
@@ -63,11 +65,11 @@ class WebSocketController(cement.Controller):
     )
     def stop(self) -> None:
         if self.app.pargs.stop_all and self.app.pargs.pid:
-            print(f"Provided {self.app.pargs.pid} while using --all flag")
+            print_cli_error(f"Provided {self.app.pargs.pid} while using --all flag")
             return
 
         if not self.app.pargs.stop_all and not self.app.pargs.pid:
-            print("Missing pid")
+            print_cli_error("Missing pid")
             return
 
         path = ""
@@ -85,7 +87,7 @@ class WebSocketController(cement.Controller):
         if res.status_code == 200:
             print(f"Stopped {self.app.pargs.pid}")
         else:
-            print(f"Error: {res.text}")
+            print_cli_error(res.text)
 
     @cement.ex(
         help='prints status of all websockts',
@@ -105,14 +107,14 @@ class WebSocketController(cement.Controller):
             res = requests.post(path)
 
             if res.status_code != 200:
-                print(f"Error: {res.text}")
+                print_cli_error(res.text)
                 return
 
         path = f"{self.app.server_address}/web_sockets/status/all"
         res = requests.get(path)
 
         if res.status_code != 200:
-            print(f"Error: {res.text}")
+            print_cli_error(res.text)
             return
 
         res_json = res.json()

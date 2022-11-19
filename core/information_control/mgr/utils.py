@@ -2,6 +2,7 @@ import socket
 import random
 
 from typing import List
+from termcolor import colored
 
 
 def is_port_in_use(port: int) -> bool:
@@ -35,3 +36,16 @@ def find_open_ports(num_ports) -> List[int]:
         sock.close()
 
     return free_ports
+
+
+def print_cli_error(text):
+    """Prints error for cli in format f"Error: {text}"
+    where "Error:" is colored in red.
+
+    Parameters
+    ----------
+    text : _type_
+        _description_
+    """
+    error_text = colored("ERROR: ", color='red', attrs=['bold'])
+    print(error_text + text)

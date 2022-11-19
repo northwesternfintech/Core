@@ -1,7 +1,6 @@
 import os
 
 import cement
-import configparser
 
 from .controllers.backtest import BacktestController
 from .controllers.base import BaseController
@@ -24,7 +23,7 @@ class CoreCLI(cement.App):
         ]
 
         config_files = [
-            os.path.join(DIR_NUFT, "config.conf")
+            os.path.join(DIR_NUFT, "config.ini")
         ]
 
         config_defaults = {
@@ -38,6 +37,19 @@ class CoreCLI(cement.App):
                 'sub_port': 50002
             },
             'paths': {
+            
+            },
+            'logging': {
+            
+            },
+            'data_acquision': {
+
+            },
+            'backtest': {
+
+            },
+            'execution': {
+
             }
         }
 
@@ -48,7 +60,7 @@ class CoreCLI(cement.App):
             self.config.remove_section(section)
 
         self.nuft_dir = os.path.join(DIR_HOME, '.nuft')
-        self.conf_path = os.path.join(self.nuft_dir, "config.conf")
+        self.conf_path = os.path.join(self.nuft_dir, "config.ini")
 
         self.config.read_dict(self._meta.config_defaults)
 
@@ -62,14 +74,13 @@ class CoreCLI(cement.App):
         server_host = self.config.get('server', 'host')
         server_port = self.config.get('server', 'port')
         self.server_address = f"http://{server_host}:{server_port}"
-        # TODO: Add additional setup
 
 
 def main():
     if not os.path.exists(DIR_NUFT):
         os.makedirs(DIR_NUFT, exist_ok=True)
 
-        with open(os.path.join(DIR_NUFT, "creds.conf"), "w"):
+        with open(os.path.join(DIR_NUFT, "config.ini"), "w"):
             pass  # TODO: Add reasonable default
 
     with CoreCLI() as app:

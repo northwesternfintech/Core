@@ -105,7 +105,8 @@ def stop_web_sockets():
         return "Missing field 'pid' in json", 400
 
     if not pids:
-        return "No PID provided", 400
+        return "No PID provided", 400, 
+
 
     try:
         for pid in pids:

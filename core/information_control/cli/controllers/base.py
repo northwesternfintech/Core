@@ -2,6 +2,7 @@ import cement
 import requests
 import subprocess
 from ...mgr.utils import find_open_ports
+from ...mgr.utils import print_cli_error
 
 # TODO: Make ascii art banner
 BANNER = r"""
@@ -63,8 +64,12 @@ class BaseController(cement.Controller):
             f"--interchange-sub-port {interchange_sub_port} "
         )
 
-        subprocess.Popen(cmd.split(), shell=False,
-                         start_new_session=True)
+        try:
+            subprocess.Popen(cmd.split(), shell=False,
+                             start_new_session=True)
+        except Exception as e:
+            print_cli_error(f"Failed to start server: {e}")
+            return
 
         self.app.server_address = f"http://{server_host}:{server_port}"
 
@@ -75,14 +80,14 @@ class BaseController(cement.Controller):
     def shutdown(self) -> None:
         """Shutsdown manager server"""
         if self.app.server_address is None:
-            print("Error: Server not running!")
+            colored("Error: Server not running!")
             return
 
         path = f"{self.app.server_address}/shutdown"
         res = requests.post(path)
 
         if res.status_code != 200:
-            print(f"Error: {res.text}")
+            print_cli_error(res.text)
             return
 
         print("Successfully shutdown server")
