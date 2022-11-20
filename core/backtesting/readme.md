@@ -80,6 +80,6 @@ Once an instance is initialized and your strategies are implemented, a local dat
 
 # Statistical Output
 
-    Sharpe ratio: compares the return of an investment with its risk
+    Sharpe ratio: compares the return of an investment with the risk free rate of return. 
     Winrate: how many trades your strategy wins
     Return: return of your strategy
