@@ -1,15 +1,16 @@
-import matplotlib.pyplot as plt
-import pandas as pd
 import os
 import shutil
+import time
+from datetime import datetime, timedelta
 
 import holidays
-from datetime import datetime, timedelta
-import portfolio
+import matplotlib.pyplot as plt
 import numpy as np
-import time
+import pandas as pd
 
-                    
+from .portfolio import Portfolio
+
+
 class Strategy():
     
     def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None, 
@@ -27,20 +28,31 @@ class Strategy():
                     the next nearest trading date
         '''
         self.start_balance = start_balance # benchmark for visualization
-        self.portfolio = portfolio.portfolio(starting_balance = start_balance, 
+        self.portfolio = Portfolio(balance=start_balance, 
                                    transaction_cost = transaction_cost)
         self.current_time = None    # datetime object for tracking the date in backtesting
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
         self._data_file_path = data_file_path or '2013-2018.csv'
-        self.data = pd.read_csv(self._data_file_path)
+        self._data = pd.read_csv(self._data_file_path)
+        self._data['date'] = pd.to_datetime(self._data['date'])
+        self._data.sort_values('date')
+
+        # print(self.data.loc[self.data['date'] not in self.nyse_holidays])
+        # for current_time, data in self._data.groupby('date'):
+        #     print(current_time.day)
+
         ###
         ### Parameters for storing statistical data for strategy
         ###
         self.benchmark_file_path = benchmark_file_path or 'US10yrsbond.csv'
         self.benchmark_df = pd.read_csv(self.benchmark_file_path)
+
         self.benchmark_df['date'] = pd.to_datetime(self.benchmark_df['Date'])
+        self.benchmark_df.set_index('date', inplace=True)
+        # print(self.benchmark_df.index)
+        
         self.benchmark = []
         self.winning_action = 0
         self.total_action = 0
@@ -81,22 +93,30 @@ class Strategy():
         
         algoStartTime = time.time()
         print('\n started backtesting')
-        while self.current_time != end_time:
-            self.load_prices()
-            if(self.is_trading_date(self.current_time)): 
+        for current_time, data in self._data.groupby('date'):
+            self.current_time = current_time
+            self.data = data
+
+            if(self.is_trading_date(self.current_time)):
                 self.run_daily()
-                if(self.week_day == self.current_time.weekday()): 
+                if(self.week_day == self.current_time.day_of_week):
                     self.run_weekly()
-                if(self.month_day == self.current_time.day): 
+                if(self.month_day == self.current_time.day):
                     self.run_monthly()
                 self.update_testing_data()
-                self.current_time += timedelta(days=1)
-                today = self.benchmark_df[self.benchmark_df['date']==self.current_time]
-                self.benchmark.append(
-                    today['Open']
-                    )
+
+                try:
+                    today = self.benchmark_df.loc[self.current_time]
+                    print(today['Open'])
+                    self.benchmark.append(
+                        today['Open']
+                        )
+                except KeyError:
+                    self.benchmark.append(
+                        0
+                        )
             else:
-                self.current_time = self.next_nearest_trading_date(self.current_time)
+                continue
         
         self.calculate_daily_gain_loss()
 
@@ -110,9 +130,9 @@ class Strategy():
         file_path = os.getcwd()
         file_path = os.path.join(file_path, 'backtester')
     
-    def load_prices(self):
-        date = f'{self.current_time.year}-{self.current_time.month}-{self.current_time.day}'
-        self.data = self.data[self.data['date'] == date]
+    # def load_prices(self):
+    #     date = f'{self.current_time.year}-{self.current_time.month}-{self.current_time.day}'
+    #     self.data = self.data[self.data['date'] == date]
 
     def log(self, msg, time): 
         '''
@@ -153,10 +173,8 @@ class Strategy():
         file_path = os.path.join(file_path, directory)
 
         # try making directory
-        try:
+        if not os.path.exists(file_path):
             os.makedirs(file_path)
-        except OSError as error:
-            print("directory already exists", error)
 
         # Make Transaction Log
         self.make_log(file_path)
@@ -189,7 +207,7 @@ class Strategy():
         '''
         Creates a text file containing a log of the transactions of portfolio
         '''
-        transactions = self.portfolio.get_transactions()
+        transactions = self.portfolio.transactions
         with open(file_path + '/transactions_log.txt', 'w+') as f:
             for i in range(len(transactions)):
                 line = transactions[i]
@@ -257,11 +275,10 @@ class Strategy():
         data_column: a string that describes which column the data is from
         '''
         total_holdings = 0 # running sum of total sum of assets in holdings
-        balance = self.portfolio.get_balance() # current balance of the portfolio
-        holdings = self.portfolio.get_holdings() # current holdings of the portfolio
+        balance = self.portfolio.balance # current balance of the portfolio
+        holdings = self.portfolio.holdings # current holdings of the portfolio
         
         data = self.prices # pandas dataframe of stock data
-
         for h in holdings:
 
             # get the price of the holdings at the current date
@@ -463,8 +480,27 @@ class Strategy():
         If date specified is not a trading date, then find the next nearest trading date
         '''
         pass
-    
-benchmark = '/Users/jialechen/Documents/GitHub/Core/core/backtesting/US10yrsbond.csv'
-path = '/Users/jialechen/Documents/GitHub/Core/core/backtesting/2013-2018.csv'
-s = Strategy(transaction_cost=0.05,start_balance=10000,data_file_path=path, benchmark_file_path=benchmark)
-s.back_testing()
+
+def test(x):
+    print("testing")
+    benchmark = '/Users/ryan/Documents/school/nufintech/Core/core/backtesting/US10yrsbond.csv'
+    path = '/Users/ryan/Documents/school/nufintech/Core/core/backtesting/2013-2018.csv'
+    s = Strategy(transaction_cost=0.05,start_balance=10000,data_file_path=path, benchmark_file_path=benchmark)
+    # s.back_testing()
+
+    return s
+
+def main():
+    print("testing")
+    # benchmark = '/Users/ryan/Documents/school/nufintech/Core/core/backtesting/US10yrsbond.csv'
+    # path = '/Users/ryan/Documents/school/nufintech/Core/core/backtesting/2013-2018.csv'
+    # s = Strategy(transaction_cost=0.05,start_balance=10000,data_file_path=path, benchmark_file_path=benchmark)
+    # s.back_testing()
+    # from line_profiler import LineProfiler
+    # s = test(1)
+    # lp = LineProfiler()
+    # lp_wrapper = lp(s.back_testing)
+    # # lp_wrapper(1)
+    # lp_wrapper()
+    # lp.print_stats()
+

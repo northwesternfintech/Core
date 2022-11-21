@@ -1,19 +1,23 @@
-from asset_trading_lib import asset
+import attr
+from .asset import Asset
+from typing import List, Dict
 
-class portfolio():
-    
-    def __init__(self, starting_balance=None, transaction_cost=None):
-        
-        self.balance = starting_balance or 10000
-        self.transaction_cost = transaction_cost or 0 # decimal percentage
-        self.transactions = [] # Consider changing this to a list of transaction objects
-        self.holdings = {} # Dictionary mapping name to asset object
 
-    def get_balance(self): return self.balance
+@attr.s()
+class Portfolio():
+    """Portfolio object for strategy
 
-    def get_transactions(self): return self.transactions
-    
-    def get_holdings(self): return self.holdings
+    Parameters
+    ----------
+    balance : float, optional
+        Starting balance of portfolio, by default 10000
+    transaction_cost : float, optional
+        Cost of transaction, by default 0
+    """
+    balance: float = attr.ib(default=10000)
+    transaction_cost: float = attr.ib(default=0)  # decimal percentage
+    transactions: List = attr.ib(init=False, factory=list)  # Consider changing this to a list of transaction objects
+    holdings: Dict = attr.ib(init=False, factory=dict)  # Dictionary mapping name to asset object
     
     def validate_order(self, stock_name, stock_price, shares):
         '''
@@ -51,8 +55,8 @@ class portfolio():
                 self.transactions.append(['buy',stock_name, stock_price, shares, 0])
                 self.balance -= stock_price*shares*(1+self.transaction_cost)
 
-                if(not self.get_holdings().has_key(stock_name)):
-                    self.holdings[stock_name] = asset(stock_name)
+                if (not self.holdings.has_key(stock_name)):
+                    self.holdings[stock_name] = Asset(stock_name)
 
                 self.holdings[stock_name].update_asset(amount=shares, price=stock_price)
 
@@ -63,8 +67,8 @@ class portfolio():
                 self.transactions.append(['sell',stock_name, stock_price, shares, net])
                 self.balance += stock_price*shares*(1-self.transaction_cost)
                 
-                if(not self.get_holdings().has_key(stock_name)):
-                    self.holdings[stock_name] = asset(stock_name)
+                if stock_name not in self.holdings:
+                    self.holdings[stock_name] = Asset(stock_name)
 
                 self.holdings[stock_name].update_asset(amount=shares, price=0)
 
