@@ -2,10 +2,13 @@ from dotenv import load_dotenv
 import boto3
 import os
 
-
+"""
+Controller for uploading files to and deleting files from AWS
+"""
 class AWSController:
 
     def __init__(self):
+        load_dotenv()
         aws_access_key = str(os.getenv("AWS_ACCESS_KEY_ID"))
         aws_secret_key = str(os.getenv("AWS_SECRET_ACCESS_KEY"))
         aws_bucket_region = str(os.getenv("AWS_BUCKET_REGION"))
@@ -26,8 +29,7 @@ class AWSController:
         self.s3_client.put_object(
                 Bucket = bucket_name,
                 Key = filename,
-                Body = file_upload,
-                ContentType = file_upload.content_type
+                Body = file_upload
             )
 
     """
