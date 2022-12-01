@@ -15,7 +15,7 @@ import time
 class Strategy():
     
     def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None, tick_freq = 1,
-                 data_file_path=None,
+                 data_file_folder='filtered',
                  benchmark_file_path=None): 
         '''
         transaction_cost: float that determines the cost of every transaction
@@ -39,8 +39,8 @@ class Strategy():
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
-        self._data_file_path = data_file_path or 'filtered'
-        ##self.data = pd.read_csv(self._data_file_path) csv reading is outdated
+        self._data_file_folder = data_file_folder
+        ##self.data = pd.read_csv(self._data_file_folder) csv reading is outdated
         ###
         ### Parameters for storing statistical data for strategy
         ###
@@ -93,7 +93,7 @@ class Strategy():
         while self.current_date != end_date:
             
             if(self.is_trading_date(self.current_date)): 
-                self.load_prices() #note that load_prices() is hardcoded to use the filtered folder at the moment
+                self.load_prices()
                 start_time = timedelta(hours=9, minutes=30) #the start time is hardcoded at the moment since all data starts at 9:30
                 #internal loop for each minute and hour
                 tick_time = timedelta(minutes=self.tick_rate)
@@ -142,9 +142,12 @@ class Strategy():
         # Old code does not look like it will work with parquet files
         date = f'{self.current_date.year}-{self.current_date.month}-{self.current_date.day}'
         ##self.data = self.data[self.data['date'] == date]
-        filename = self._data_file_path + '\\' + date + '.parquet'
-        table = pq.read_table(filename)
-        self.data = table.to_pandas()
+        #filename = self._data_file_folder + '\\' + date + '.parquet'
+        filepath = os.path.join(self._data_file_folder, date+'.parquet')
+        # table = pq.read_table(filepath)
+        # self.data = table.to_pandas()
+        self.data = pd.read_parquet(filepath)
+
 
 
     def log(self, msg, time): 
@@ -475,11 +478,13 @@ class Strategy():
         '''
         This method is overided by the designer. Executed on each tick. By default each minute.
         '''
+        pass
 
     def run_hourly(self):
         '''
         Overrided by the designer, executes at the first instance where the hour changes from one hour to the next (i.e., 9AM to 10AM)    
         '''
+        pass
     
     def run_daily(self):
         '''
