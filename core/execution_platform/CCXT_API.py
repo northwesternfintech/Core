@@ -1,6 +1,7 @@
 import ccxt
 import ccxt_error
 from dotenv import load_dotenv
+from collections import deque
 
 
 class executionPlatform:
@@ -8,12 +9,13 @@ class executionPlatform:
         load_dotenv()
         self.mapToExchange = {}
         self.errorLog = []
+        self.retryQueue = deque()
 
     def createExchange(self, exchangeName):
         """createExchange() takes in the name of the exchange you want to use and creates an instance of it in the mapToExchange dictionary. Raises an exception if the exchange doesn't exist in CCXT."""
 
         if exchangeName not in ccxt.exchanges:
-            self.errorLog.append(ccxt_error.no_exchange_error(exchange))
+            self.errorLog.append(ccxt_error.no_exchange_error(exchangeName))
         self.mapToExchange[exchangeName] = ccxt.eval(exchangeName)()
         self.mapToExchange[exchangeName].secret = eval(exchangeName)[0]
         self.mapToExchange[exchangeName].apiKey = eval(exchangeName)[1]
@@ -58,8 +60,6 @@ class executionPlatform:
             except Exception as e:
                 print(e)
 
-    """editOrder() takes in the exchange name, order ID, trading pair symbols, trade type, trade side, trade amount, and price (if limit order). It edits the corresponding order with these parameters. Returns an exception if failed."""
-
     def editOrder(
         self,
         exchange: str,
@@ -70,6 +70,7 @@ class executionPlatform:
         tradeAmount: int,
         price: float = None,
     ):
+        """editOrder() takes in the exchange name, order ID, trading pair symbols, trade type, trade side, trade amount, and price (if limit order). It edits the corresponding order with these parameters. Returns an exception if failed."""
         if exchange not in self.mapToExchange:
             self.errorLog.append(ccxt_error.no_exchange_error(exchange))
         else:
@@ -85,9 +86,10 @@ class executionPlatform:
             except Exception as e:
                 print(e)
 
-    """inspectOrder() takes in the exchange name and order ID. It returns all of the order information in the returned 'Order Structure'."""
+   
 
     def inspectOrder(self, exchange: str, orderID=None):
+        """inspectOrder() takes in the exchange name and order ID. It returns all of the order information in the returned 'Order Structure'."""
         if exchange not in self.mapToExchange:
             self.errorLog.append(ccxt_error.no_exchange_error(exchange))
         else:
@@ -96,9 +98,10 @@ class executionPlatform:
             except Exception as e:
                 print(e)
 
-    """cancelOrder() takes in the exchange name, orderID, and the trading pair symbols. It cancels the corresponding order. Returns an exception if failed."""
+    
 
     def cancelOrder(self, exchange: str, orderID, tradingPair: str = None):
+        """cancelOrder() takes in the exchange name, orderID, and the trading pair symbols. It cancels the corresponding order. Returns an exception if failed."""
         if exchange == "ALL":
             if tradingPair != None:
                 for i in self.mapToExchange:
@@ -122,15 +125,15 @@ class executionPlatform:
 
     """calls the given algorithm and then runs all the orders returned from it.
 
-  return type of algorithm: list of dictionaries with the following fields
-  [{exchange:str, tradeSymbol:str, tradeType:str, tradeSide:str, tradeAmount:int, price:float},]
+    return type of algorithm: list of dictionaries with the following fields
+    [{exchange:str, tradeSymbol:str, tradeType:str, tradeSide:str, tradeAmount:int, price:float},]
 
-  def update(self,algorithm):
-    orders = algorithm()
-    result = [None for _ in range(len(orders))]
-    for i,order in orders:
-      result[i] = self.placeOrder(order) #unpack
-      #get all the order info and then call self.createOrder()
-      #return a list of order structures - each order structure corresponding to that order
-    return result
-"""
+    def update(self,algorithm):
+      orders = algorithm()
+      result = [None for _ in range(len(orders))]
+      for i,order in orders:
+        result[i] = self.placeOrder(order) #unpack
+        #get all the order info and then call self.createOrder()
+        #return a list of order structures - each order structure corresponding to that order
+      return result
+    """
