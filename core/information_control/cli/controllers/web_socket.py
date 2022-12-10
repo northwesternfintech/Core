@@ -2,9 +2,16 @@ import cement
 import requests
 
 from ...mgr.utils import print_cli_error
+from cement.ext.ext_argparse import ArgparseArgumentHandler
+import argparse
 
 
-class WebSocketController(cement.Controller):
+class BaseParser(ArgparseArgumentHandler):
+    class Meta:
+        ignore_unknown_arguments = True
+
+
+class WebSocketController(cement.Controller, BaseParser):
     class Meta:
         label = 'websocket'
         description = 'start, stop, manage websockets'
@@ -95,13 +102,19 @@ class WebSocketController(cement.Controller):
             (['--clear'],
              {'help': 'clears stopped/failed web sockets',
               'dest': 'clear',
-              'action': 'store_true'})
+              'action': 'store_true'}),
+            (['args'],
+             {'nargs': argparse.REMAINDER})
         ]
     )
     def status(self) -> None:
         headers = ['PID', 'Ticker Names', 'Status']
         data = []
+        self.app.args.parse_args()
 
+        print(self.app.args)
+        print(self.app.pargs)
+        return
         if self.app.pargs.clear:
             path = f"{self.app.server_address}/web_sockets/status/clear"
             res = requests.post(path)

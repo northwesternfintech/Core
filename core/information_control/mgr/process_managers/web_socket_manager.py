@@ -6,24 +6,19 @@ import logging
 import psutil
 import time
 
-from .status import WebSocketStatus
+from ..workers.status import WorkerStatus
+from .process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
 
 
-class WebSocketManager:
+class WebSocketManager(ProcessManager):
     """Manages the startup/status/shutdown of web sockets.
 
-    self._manager : Manager
-        Instance of parent Manager
-    self._running_pids : Set[str]
-        Set of PIDs of running processes
     self._running_tickers : Set[str]
         Set of tickers currently being retrieved
     self._pid_tickers : Dict[str, Set[str]]
         Map of PIDs to set of tickers the process is running
-    self._pid_status : Dict[str, WebSocketStatus]
-        Map of PIDs to process status
     self._pid_process : Dict[int, subprocess.Popen]
         Map of PIDs to processes
     """
@@ -37,14 +32,10 @@ class WebSocketManager:
         manager : Manager
             Instance of parent Manager
         """
-        self._manager = manager
+        super().__init__(manager)
 
-        self._running_pids: Set[int] = set()
         self._running_tickers: Set[str] = set()
-
         self._pid_tickers: Dict[int, Set[str]] = {}
-        self._pid_status: Dict[int, WebSocketStatus] = {}
-        self._pid_process: Dict[int, subprocess.Popen] = {}
 
     def start(self, tickers: List[str]) -> int:
         """Takes a list of ticker names and starts a websocket to retrieve
@@ -96,13 +87,10 @@ class WebSocketManager:
         pid = process.pid
 
         # Update status
-        self._manager._cur_worker_count += 1
-        self._running_pids.add(pid)
-        self._running_tickers.update(tickers_set)
+        self._add_worker(pid, process)
 
+        self._running_tickers.update(tickers_set)
         self._pid_tickers[pid] = tickers_set
-        self._pid_status[pid] = WebSocketStatus.WORKING
-        self._pid_process[pid] = process
 
         return pid
 
@@ -127,12 +115,10 @@ class WebSocketManager:
 
         os.kill(pid, signal.SIGTERM)
 
-        self._manager._cur_worker_count -= 1
-        self._running_pids.remove(pid)
+    def _remove_worker(self, pid: int) -> None:
+        super()._remove_worker(pid)
         self._running_tickers -= self._pid_tickers[pid]
         self._pid_tickers.pop(pid)
-        self._pid_status[pid] = WebSocketStatus.STOPPED
-        self._pid_process.pop(pid)
 
     def status(self, pid: int) -> Dict[str, Union[List[str], str]]:
         """Takes PID of web socket and returns the operational status.
@@ -168,6 +154,16 @@ class WebSocketManager:
 
         return status_dict
 
+    def _update_status(self):
+        failed_pids = []
+        for pid in self._running_pids:
+            process = self._pid_process[pid]
+            if process.poll() is not None and process.poll() < 0:
+                failed_pids.append(pid)
+
+        for pid in failed_pids:
+            self._remove_worker(pid)
+
     def status_all(self) -> Dict[int, Dict[str, Union[List[str], str]]]:
         """Returns status of all active PIDs.
 
@@ -183,44 +179,6 @@ class WebSocketManager:
             pid_statuses[pid] = self.status(pid)
 
         return pid_statuses
-
-    def clear_status(self):
-        """
-        Removes all STOPPED or FAILED websockets
-        """
-        pid_to_clear = []
-        for pid, status in self._pid_status.items():
-            if status in [WebSocketStatus.STOPPED, WebSocketStatus.FAILED]:
-                pid_to_clear.append(pid)
-
-        for pid in pid_to_clear:
-            self._pid_status.pop(pid)
-
-    def _update_status(self):
-        """
-        Checks whether running web sockets are still operational
-        """
-        failed_pids = []
-        for pid in self._running_pids:
-            process = self._pid_process[pid]
-            if process.poll() and process.poll() < 0:
-                failed_pids.append(pid)
-
-        for pid in failed_pids:
-            self._manager._cur_worker_count -= 1
-            self._running_pids.remove(pid)
-            self._running_tickers -= self._pid_tickers[pid]
-            self._pid_tickers.pop(pid)
-            self._pid_status[pid] = WebSocketStatus.FAILED
-            self._pid_process.pop(pid)
-
-    def shutdown(self):
-        """Stops all running web sockets. Object should not
-        be used again after calling this method"""
-        for pid in self._running_pids.copy():
-            self.stop(pid)
-
-
 
 def main():
     pass

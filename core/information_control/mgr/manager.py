@@ -7,8 +7,8 @@ from typing import Optional
 import logging
 import psutil
 
-from .backtest_manager import BacktestManager
-from .web_socket_manager import WebSocketManager
+from .process_managers.backtest_manager import BacktestManager
+from .process_managers.web_socket_manager import WebSocketManager
 
 logger = logging.getLogger(__name__)
 

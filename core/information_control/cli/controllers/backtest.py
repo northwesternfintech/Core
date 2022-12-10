@@ -16,31 +16,13 @@ class BacktestController(cement.Controller):
     @cement.ex(
         help='starts backtest',
         arguments=[
-            (['algo_path'],
-             {'help': 'path to algorithm to backtest',
-              'metavar': 'algo-path'}),
             (['--mode'],
              {'help': '"historical" or "realtime"',
-              'default': 'realtime'}),
-            (['-s', '--historical-start'],
-             {'help': 'start date formatted YYYY-MM-DD if --mode is "historical"',
-              'default': ""}),  # TODO: Set reasonable default
-            (['-e', '--historical-end'],
-             {'help': 'end date formatted YYYY-MM-DD if --mode is "historical"',
-             'default': ""})  # TODO: Set reasonable default
+              'default': 'realtime'})
         ]
     )
     def start(self) -> None:
-        print(self.app.pargs)
-
-        VALID_MODES = ["historical", "realtime"]
-
-        if self.app.pargs.mode not in VALID_MODES:
-            raise ValueError(f"Expected valid backtest mode, received {self.app.pargs.mode}")
-
-        # TODO
-
-        # Start algo backtest
+        pass
 
     @cement.ex(
         help='prints status of running backtests'

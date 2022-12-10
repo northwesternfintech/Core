@@ -7,7 +7,7 @@ from typing import List
 
 import zmq.asyncio
 
-from .coinbase import CoinbaseWebSocket
+from ..coinbase import CoinbaseWebSocket
 
 
 class WebSocketWorker:

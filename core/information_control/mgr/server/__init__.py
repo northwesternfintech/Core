@@ -193,58 +193,134 @@ def web_sockets_status_clear():
 
 @app.route('/backtest/start', methods=['POST'])
 def start_backtest():
-    """Starts backtests. Validating backtest names is the
+    """Starts backtests. Validating backtest parameters is the 
     responsibility of the Manager.
 
     Request Parameters
     ------------------
-    backtest_names : List[str]
-        List of names of backtests to start
+    mode : str
+        'historical' or 'live'
+    kwargs
+        Keyword arguments to past to backtester.
 
     Returns
     -------
     200
-        If successfully starts backtests
+        If successfully starts backtesting.
     400
-        If malformed inputs
-    404
-        If backtest name can't be found
+        If malformed inputs.
     """
-    return "not implemented", 404
-    request_params = request
-    backtest_names = []
-
+    if 'mode' not in request:
+        return "Missing parameter 'mode'", 400
     try:
-        backtest_names = request["backtest_names"]
-    except KeyError:
-        return ValueError(), 400 # TODO: Return custom error
-
-    if not backtest_names:
-        return ValueError(), 400
-
-    try:
-        manager.backtest.start(backtest_names)
+        manager.backtest.start(request)
     except Exception as e:
-        return ValueError(), 404 
+        return str(e), 404
 
 
-@app.route('/backtest/status/<string:backtest_name>', methods=['GET'])
-def backtest_status(web_socket_name):
-    """Returns status of backtest
+@app.route('/backtest/status/<int:pid>', methods=['GET'])
+def backtest_status(pid):
+    """Returns status of PID
 
     Request Parameters
     ------------------
-    backtest_name : str
-        Name of backtest to get status of
+    pid : str
+        PIDs of backtest to get status of
 
     Returns
     -------
+    str, 200
+        If successfully retrieves backtest status
+    404
+        If failed to find active PID
+    500
+        Manager error
     """    
-    return "not implemented", 404
     try:
-        return jsonify(manager.backtest.status(web_socket_name))
+        return manager.backtest.status(pid), 200
+    except ValueError:
+        return f"Failed to find PID {pid}", 404
     except Exception as e:
-        return ValueError(), 500
+        logger.exception(f"Manager failed to retrieve web socket status of {pid}")
+        return str(e), 500
+
+
+@app.route('/backtest/status/all', methods=['GET'])
+def backtest_status_all():
+    """Returns status of all active PIDs
+
+    Returns
+    -------
+    Dict[int, Tuple[List[str], str]], 200
+        If successfully retrieves web socket statuses
+    500
+        Manager error
+    """
+    try:
+        return jsonify(manager.backtest.status_all())
+    except Exception as e:
+        logger.exception("Manager failed to retrieve all web socket statuses")
+        return str(e), 500
+
+
+@app.route('/backtest/status/clear', methods=['POST'])
+def backtest_status_clear():
+    """Clears web socket status
+
+    Returns
+    -------
+    200
+        If successfully clears web socket statuses
+    500
+        Manager error
+    """
+    try:
+        return jsonify(manager.backtest.clear_status())
+    except Exception as e:
+        logger.exception("Manager failed to clear web socket status")
+        return str(e), 500
+
+
+@app.route('/backtest/stop', methods=['POST'])
+def stop_backtests():
+    """Stops backtest. Validating backtest PIDs is the
+    responsibility of the Manager.
+
+    Request Parameters
+    ------------------
+    pid : List[str]
+        Pid of backtest to stop
+
+    Returns
+    -------
+    200
+        If successfully stops backtest
+    400
+        If malformed inputs
+    404
+        If PID name can't be found
+    """
+    request_params = request.json
+    pids = None
+
+    try:
+        pids = request_params["pid"]
+    except KeyError:
+        return "Missing field 'pid' in json", 400
+
+    if not pids:
+        return "No PID provided", 400
+
+    for pid in pids:
+        try:
+            manager.backtest.stop(int(pid))
+        except ValueError:
+            return f"Failed to find PID {pid}", 404
+        except Exception as e:
+            logger.exception(f"Manager failed to stop {pid}")
+            return str(e), 500
+
+    return '', 200
 
 
 def cli_run():

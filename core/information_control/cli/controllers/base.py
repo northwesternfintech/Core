@@ -3,6 +3,7 @@ import requests
 import subprocess
 from ...mgr.utils import find_open_ports
 from ...mgr.utils import print_cli_error
+from cement.ext.ext_argparse import ArgparseArgumentHandler
 
 # TODO: Make ascii art banner
 BANNER = r"""
@@ -26,7 +27,12 @@ Docs:
 __all__ = ['BaseController']
 
 
-class BaseController(cement.Controller):
+class BaseParser(ArgparseArgumentHandler):
+    class Meta:
+        ignore_unknown_arguments = True
+
+
+class BaseController(cement.Controller, BaseParser):
     class Meta:
         label = 'base'
         description = 'An interactive platform for using NUFT Core'

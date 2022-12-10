@@ -1,0 +1,2 @@
+The winrate of your strategy over the time interval of (2013-03-28,2018-02-05) is 0
+The sharpe ratio is 0

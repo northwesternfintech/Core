@@ -44,7 +44,7 @@ def main():
     print("[*] Waiting for logs. To exit press CTRL+C")
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
-    socket.connect("tcp://127.0.0.1:50002")
+    socket.connect("tcp://127.0.0.1:55690")
     socket.setsockopt_string(zmq.SUBSCRIBE, "BTC-USDT")
     socket.setsockopt_string(zmq.SUBSCRIBE, "ETH-USDT")
 
