@@ -1,0 +1,232 @@
+import click
+from click import ClickException
+import configparser
+import os
+import subprocess
+import requests
+
+from typing import List
+from tabulate import tabulate
+
+from .mgr.utils import find_open_ports
+
+DIR_HOME = os.path.expanduser('~')
+DIR_NUFT = os.path.join(DIR_HOME, '.nuft')
+
+
+class NUFTConfig:
+    def __init__(self, config_path: str, nuft_dir: str):
+        self.config_path = config_path
+        self.nuft_dir = nuft_dir
+        self.config = configparser.ConfigParser()
+
+        if os.path.exists(config_path):
+            self.config.read(config_path)
+        else:
+            # TODO: Create default config at location
+            pass
+
+        server_port = self.config['server'].get('port')
+        server_host = self.config['server'].get('host')
+
+        if not (server_port and server_host):
+            raise ClickException("Missing server port or host in config!")
+
+        self.server_address = f"http://{server_host}:{server_port}"
+
+
+@click.group('nuft')
+@click.option(
+    '-d',
+    '--nuft-dir',
+    default=DIR_NUFT,
+    help='path to directory to store nuft data'
+)
+@click.option(
+    '-c',
+    '--config-path',
+    default=os.path.join(DIR_NUFT, 'config.ini'),
+    help='path to nuft configuration file'
+)
+@click.pass_context
+def app(ctx, nuft_dir: str, config_path: str):
+    ctx.obj = NUFTConfig(config_path, nuft_dir)
+
+
+@app.command('start')
+@click.pass_context
+def start_server(ctx):
+    """Starts manager server"""
+    nuft_config = ctx.obj
+
+    server_host = nuft_config.config['server']['host']
+    server_port = find_open_ports(1)[0]
+    nuft_config.config['server']['port'] = str(server_port)
+
+    manager_path = nuft_config.nuft_dir
+
+    interchange_host = nuft_config.config['interchange']['host']
+    interchange_pub_port, interchange_sub_port = list(map(str, find_open_ports(2)))
+    nuft_config.config['interchange']['pub_port'] = interchange_pub_port
+    nuft_config.config['interchange']['sub_port'] = interchange_sub_port
+
+    cmd = (
+           "manager_server "
+           f"--server-address {server_host} "
+           f"--server-port {server_port} "
+           f"--manager-path {manager_path} "
+           f"--interchange-address {interchange_host} "
+           f"--interchange-pub-port {interchange_pub_port} "
+           f"--interchange-sub-port {interchange_sub_port} "
+    )
+
+    try:
+        subprocess.Popen(cmd.split(), shell=False,
+                         start_new_session=True)
+    except Exception as e:
+        raise ClickException(f"Failed to start server: {e}")
+
+    with open(nuft_config.config_path, 'w') as f:
+        nuft_config.config.write(f)
+
+
+@app.command('shutdown')
+@click.pass_context
+def shutdown_server(ctx):
+    """Shutsdown manager server"""
+    nuft_config = ctx.obj
+
+    server_host = nuft_config.config['server'].get('host')
+    server_port = nuft_config.config['server'].get('port')
+    if not (server_host and server_port):
+        raise ClickException("Server not running!")
+
+    path = f"{nuft_config.server_address}/shutdown"
+    res = requests.post(path)
+
+    if res.status_code != 200:
+        raise ClickException(res.text)
+
+    print("Successfully shutdown server")
+
+
+@app.group('websocket')
+def web_socket_handler():
+    pass
+
+
+@web_socket_handler.command('start')
+@click.argument(
+    'ticker_names',
+    nargs=-1,
+)
+@click.pass_context
+def web_socket_start(cxt, ticker_names):
+    """Takes multiple ticker names to start
+    
+    e.g. `nuft websocket start BTC-USDT ETH USDT`
+    """
+    ticker_names = list(ticker_names)
+    if not ticker_names:
+        raise ClickException("Missing ticker names!")
+
+    nuft_config = cxt.obj
+
+    path = f"{nuft_config.server_address}/web_sockets/start"
+    payload = {
+        "ticker_names": ticker_names
+    }
+
+    res = requests.post(path, json=payload)
+    pid = res.text
+
+    if res.status_code == 200:
+        print(f"Started {ticker_names} at {pid}")
+    else:
+        raise ClickException(res.text)
+
+
+@web_socket_handler.command('stop')
+@click.option(
+    '--all',
+    'stop_all',
+    is_flag=True,
+    default=False,
+    help="whether to stop all web sockets"
+)
+@click.argument(
+    'pids',
+    nargs=-1
+)
+@click.pass_context
+def web_socket_stop(cxt, stop_all, pids):
+    """Takes multiple pids of web sockets to stop
+
+    e.g. `nuft websocket stop 123 456`
+    """
+    pids = list(pids)
+    if stop_all and pids:
+        raise ClickException("Provided pids while using --all flag")
+
+    if not (stop_all or pids):
+        raise ClickException("Missing pids")
+
+    nuft_config = cxt.obj
+
+    path = ""
+    if stop_all:
+        path = f"{nuft_config.server_address}/web_sockets/stop_all"
+    else:
+        path = f"{nuft_config.server_address}/web_sockets/stop"
+
+    payload = {
+        "pids": pids
+    }
+
+    res = requests.post(path, json=payload)
+
+    if res.status_code == 200:
+        print(f"Stopped {pids if pids else 'all websockets'}!")
+    else:
+        raise ClickException(res.text)
+
+
+@web_socket_handler.command('status')
+@click.option(
+    '--clear',
+    is_flag=True,
+    default=False,
+    help="whether to remove websockets with 'failed' or 'stopped' status"
+)
+@click.pass_context
+def web_socket_status(cxt, clear):
+    headers = ['PID', 'Ticker Names', 'Status']
+    data = []
+
+    nuft_config = cxt.obj
+
+    if clear:
+        path = f"{nuft_config.server_address}/web_sockets/status/clear"
+        res = requests.post(path)
+
+        if res.status_code != 200:
+            raise ClickException(res.text)
+
+    path = f"{nuft_config.server_address}/web_sockets/status/all"
+    res = requests.get(path)
+
+    if res.status_code != 200:
+        raise ClickException(res.text)
+
+    res_json = res.json()
+    for pid, pid_data in res_json.items():
+        ticker_names = pid_data['tickers']
+        status = pid_data['status']
+
+        data.append([pid, ' '.join(ticker_names), status])
+
+    print(tabulate(data, headers, tablefmt='outline'))
+        
+
+def cli_run():
+    app()

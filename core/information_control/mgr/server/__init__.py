@@ -88,13 +88,13 @@ def start_web_sockets():
 
 @app.route('/web_sockets/stop', methods=['POST'])
 def stop_web_sockets():
-    """Stops web socket. Validating web socket PIDs is the
+    """Stops web sockets. Validating web socket PIDs is the
     responsibility of the Manager.
 
     Request Parameters
     ------------------
     pid : List[str]
-        Pid of web socket to stop
+        Pid of web sockets to stop
 
     Returns
     -------
@@ -104,19 +104,44 @@ def stop_web_sockets():
         If malformed inputs
     404
         If PID name can't be found
+    500
+        If fails to stop websocket
     """
     request_params = request.json
     pids = None
 
     try:
-        pids = request_params["pid"]
+        pids = request_params["pids"]
     except KeyError:
-        return "Missing field 'pid' in json", 400
+        return "Missing field 'pids' in json", 400
 
     if not pids:
         return "No PID provided", 400
 
     for pid in pids:
+        try:
+            manager.web_sockets.stop(int(pid))
+        except ValueError:
+            return f"Failed to find PID {pid}", 404
+        except Exception as e:
+            logger.exception(f"Manager failed to stop {pid}")
+            return str(e), 500
+
+    return '', 200
+
+
+@app.route('/web_sockets/stop_all', methods=['POST'])
+def stop_all_web_sockets():
+    """Stops all web sockets.
+
+    Returns
+    -------
+    200
+        If successfully stops web sockets
+    500
+        If fails to stop websocket
+    """
+    for pid in manager.web_sockets._running_pids.copy():
         try:
             manager.web_sockets.stop(int(pid))
         except ValueError:

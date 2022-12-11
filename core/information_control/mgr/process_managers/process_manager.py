@@ -80,6 +80,7 @@ class ProcessManager(ABC):
             raise ValueError(f"{pid} is invalid or not running")
 
         os.kill(pid, signal.SIGTERM)
+        self._remove_worker(pid)
 
     def _remove_worker(self, pid: int) -> None:
         """Removes worker from class variables.
