@@ -2,9 +2,12 @@ import os
 import signal
 import subprocess
 from typing import Dict, List, Set, Tuple, Union
+import logging
 
 from ..workers.status import WorkerStatus
 from abc import ABC
+
+logger = logging.getLogger(__name__)
 
 
 class ProcessManager(ABC):
@@ -58,6 +61,7 @@ class ProcessManager(ABC):
             Process object to track.
         """
         self._manager._cur_worker_count += 1
+        logger.error(f"Added pid {pid}")
         self._running_pids.add(pid)
 
         self._pid_status[pid] = WorkerStatus.WORKING
@@ -161,6 +165,7 @@ class ProcessManager(ABC):
         failed_pids = []
         for pid in self._running_pids:
             process = self._pid_process[pid]
+            logger.error(f"STATUS {pid}: {process.poll()}")
             if process.poll() is not None and process.poll() < 0:
                 failed_pids.append(pid)
 
@@ -171,4 +176,5 @@ class ProcessManager(ABC):
         """Stops all running web sockets. Object should not
         be used again after calling this method"""
         for pid in self._running_pids.copy():
+            logger.error(f"Stopping {pid}")
             self.stop(pid)

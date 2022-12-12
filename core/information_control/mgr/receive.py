@@ -40,17 +40,33 @@ import sys
 # def main():
 #     asyncio.run(_main())
 
-def main():
-    print("[*] Waiting for logs. To exit press CTRL+C")
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.connect("tcp://127.0.0.1:55690")
-    socket.setsockopt_string(zmq.SUBSCRIBE, "BTC-USDT")
-    socket.setsockopt_string(zmq.SUBSCRIBE, "ETH-USDT")
+# def main():
+#     print("[*] Waiting for logs. To exit press CTRL+C")
+#     context = zmq.asyncio.Context()
+#     socket = context.socket(zmq.SUB)
+#     socket.connect("tcp://127.0.0.1:50002")
+#     socket.setsockopt_string(zmq.SUBSCRIBE, "BTC-USDT")
+#     socket.setsockopt_string(zmq.SUBSCRIBE, "ETH-USDT")
 
+#     while True:
+#         string = socket.recv()
+#         print(string)
+
+import asyncio
+import zmq
+import zmq.asyncio
+
+async def recv_and_process():
+    ctx = zmq.asyncio.Context()
+    sock = ctx.socket(zmq.SUB)
+    sock.connect("tcp://127.0.0.1:50002")
+    sock.setsockopt_string(zmq.SUBSCRIBE, "BTC-USDT")
     while True:
-        string = socket.recv()
-        print(string)
+        msg = await sock.recv() # waits for msg to be ready
+        print(msg)
+
+def main():
+    asyncio.run(recv_and_process())
 
 # def main():
 

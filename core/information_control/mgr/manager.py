@@ -68,6 +68,8 @@ class Manager:
         """Deallocates all necessary resources. No manager operations
         should be done after calling this function."""
         self.web_sockets.shutdown()
+        logger.error("Shutting down backtest")
+        self.backtest.shutdown()
 
         time.sleep(1)  # Delay to allow termination messsages to send
         os.kill(self._interchange_pid, signal.SIGTERM)

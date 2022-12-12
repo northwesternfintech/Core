@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+DIR_HOME = os.path.expanduser('~')
+DIR_NUFT = os.path.join(DIR_HOME, '.nuft')
+
 
 @app.route('/status', methods=['GET'])
 def get_status():
@@ -235,10 +238,14 @@ def start_backtest():
     400
         If malformed inputs.
     """
-    if 'mode' not in request:
+    request_params = request.json
+
+    if 'mode' not in request_params:
         return "Missing parameter 'mode'", 400
     try:
-        manager.backtest.start(request)
+        mode = request_params.pop('mode')
+        pid = manager.backtest.start(mode, **request_params)
+        return str(pid), 200
     except Exception as e:
         return str(e), 404
 
@@ -329,7 +336,7 @@ def stop_backtests():
     pids = None
 
     try:
-        pids = request_params["pid"]
+        pids = request_params["pids"]
     except KeyError:
         return "Missing field 'pid' in json", 400
 
@@ -339,6 +346,29 @@ def stop_backtests():
     for pid in pids:
         try:
             manager.backtest.stop(int(pid))
+        except ValueError:
+            return f"Failed to find PID {pid}", 404
+        except Exception as e:
+            logger.exception(f"Manager failed to stop {pid}")
+            return str(e), 500
+
+    return '', 200
+
+
+@app.route('/backtest/stop_all', methods=['POST'])
+def stop_all_backtests():
+    """Stops all backtests.
+
+    Returns
+    -------
+    200
+        If successfully stops web sockets
+    500
+        If fails to stop websocket
+    """
+    for pid in manager.backtest._running_pids.copy():
+        try:
+            manager.web_sockets.stop(int(pid))
         except ValueError:
             return f"Failed to find PID {pid}", 404
         except Exception as e:
@@ -360,7 +390,7 @@ def cli_run():
         help="Port to start server on"
     )
     parser.add_argument(
-        "--manager-path",
+        "--manager-path", default=DIR_NUFT,
         help="Path to nuft folder for manager to use"
     )
     parser.add_argument(

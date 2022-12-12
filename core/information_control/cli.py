@@ -29,6 +29,8 @@ class NUFTConfig:
         server_port = self.config['server'].get('port')
         server_host = self.config['server'].get('host')
 
+        server_port = '5000'
+
         if not (server_port and server_host):
             raise ClickException("Missing server port or host in config!")
 
@@ -121,7 +123,7 @@ def web_socket_handler():
     nargs=-1,
 )
 @click.pass_context
-def web_socket_start(cxt, ticker_names):
+def web_socket_start(ctx, ticker_names):
     """Takes multiple ticker names to start
     
     e.g. `nuft websocket start BTC-USDT ETH USDT`
@@ -130,7 +132,7 @@ def web_socket_start(cxt, ticker_names):
     if not ticker_names:
         raise ClickException("Missing ticker names!")
 
-    nuft_config = cxt.obj
+    nuft_config = ctx.obj
 
     path = f"{nuft_config.server_address}/web_sockets/start"
     payload = {
@@ -159,7 +161,7 @@ def web_socket_start(cxt, ticker_names):
     nargs=-1
 )
 @click.pass_context
-def web_socket_stop(cxt, stop_all, pids):
+def web_socket_stop(ctx, stop_all, pids):
     """Takes multiple pids of web sockets to stop
 
     e.g. `nuft websocket stop 123 456`
@@ -171,7 +173,7 @@ def web_socket_stop(cxt, stop_all, pids):
     if not (stop_all or pids):
         raise ClickException("Missing pids")
 
-    nuft_config = cxt.obj
+    nuft_config = ctx.obj
 
     path = ""
     if stop_all:
@@ -199,11 +201,11 @@ def web_socket_stop(cxt, stop_all, pids):
     help="whether to remove websockets with 'failed' or 'stopped' status"
 )
 @click.pass_context
-def web_socket_status(cxt, clear):
+def web_socket_status(ctx, clear):
     headers = ['PID', 'Ticker Names', 'Status']
     data = []
 
-    nuft_config = cxt.obj
+    nuft_config = ctx.obj
 
     if clear:
         path = f"{nuft_config.server_address}/web_sockets/status/clear"
@@ -226,7 +228,134 @@ def web_socket_status(cxt, clear):
         data.append([pid, ' '.join(ticker_names), status])
 
     print(tabulate(data, headers, tablefmt='outline'))
-        
+
+
+@app.group('backtest')
+def backtest_handler():
+    pass
+
+
+@backtest_handler.command('start',
+    context_settings={
+        "ignore_unknown_options": True,
+        "allow_extra_args": True
+    },
+    help="""
+    Takes a mode and a keyword arguments for backtesting
+
+    e.g. `nuft backtest start -m historical --strategy=ema`
+    """
+)
+@click.option(
+    '-m',
+    '--mode',
+    required=True,
+    type=click.Choice(['historical', 'live'], case_sensitive=False),
+    help='whether to run in historical or live data mode'
+)
+@click.pass_context
+def backtest_start(ctx, mode):
+    kwargs = dict([item.strip('--').split('=') for item in ctx.args])
+    print(kwargs)
+
+    nuft_config = ctx.obj
+
+    path = f"{nuft_config.server_address}/backtest/start"
+    payload = {
+        'mode': mode
+    }
+    payload.update(kwargs)
+
+    res = requests.post(path, json=payload)
+    pid = res.text
+
+    if res.status_code == 200:
+        print(f"Started backtest at {pid}")
+    else:
+        raise ClickException(res.text)
+
+
+@backtest_handler.command('stop')
+@click.option(
+    '--all',
+    'stop_all',
+    is_flag=True,
+    default=False,
+    help="whether to stop all backtests"
+)
+@click.argument(
+    'pids',
+    nargs=-1
+)
+@click.pass_context
+def backtest_stop(ctx, stop_all, pids):
+    """Takes multiple pids of backtests to stop
+
+    e.g. `nuft backtest stop 123 456`
+    """
+    pids = list(pids)
+    if stop_all and pids:
+        raise ClickException("Provided pids while using --all flag")
+
+    if not (stop_all or pids):
+        raise ClickException("Missing pids")
+
+    nuft_config = ctx.obj
+
+    path = ""
+    if stop_all:
+        path = f"{nuft_config.server_address}/backtest/stop_all"
+    else:
+        path = f"{nuft_config.server_address}/backtest/stop"
+
+    payload = {
+        "pids": pids
+    }
+
+    res = requests.post(path, json=payload)
+
+    if res.status_code == 200:
+        print(f"Stopped {pids if pids else 'all backtests'}!")
+    else:
+        raise ClickException(res.text)
+
+
+@backtest_handler.command('status')
+@click.option(
+    '--clear',
+    is_flag=True,
+    default=False,
+    help="whether to remove backtests with 'failed' or 'stopped' status"
+)
+@click.pass_context
+def backtest_status(ctx, clear):
+    headers = ['PID', 'Status']
+    data = []
+
+    nuft_config = ctx.obj
+
+    if clear:
+        path = f"{nuft_config.server_address}/backtest/status/clear"
+        res = requests.post(path)
+
+        if res.status_code != 200:
+            raise ClickException(res.text)
+
+    path = f"{nuft_config.server_address}/backtest/status/all"
+    res = requests.get(path)
+
+    if res.status_code != 200:
+        raise ClickException(res.text)
+
+    res_json = res.json()
+    for pid, pid_data in res_json.items():
+        status = pid_data['status']
+
+        data.append([pid, status])
+
+    print(tabulate(data, headers, tablefmt='outline'))
+
 
 def cli_run():
     app()
+

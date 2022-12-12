@@ -24,7 +24,7 @@ class BacktestManager(ProcessManager):
         """
         super().__init__(manager)
 
-    def start(self, strategy_name: str, mode='historical',
+    def start(self, mode='historical',
               block=False, **kwargs) -> int:
         """Starts a worker to backtest an algorithm.
 
@@ -61,12 +61,11 @@ class BacktestManager(ProcessManager):
             f"--mode {mode} "
         ]
 
-        for kwarg_name, kwarg_val in kwargs.values():
+        for kwarg_name, kwarg_val in kwargs.items():
             cmd.append(f"--{kwarg_name} {kwarg_val} ")
 
-        logger.error(cmd)
-
-        process = subprocess.Popen(cmd.split(), shell=False,
+        logger.error(''.join(cmd).split())
+        process = subprocess.Popen(''.join(cmd).split(), shell=False,
                                    start_new_session=True)
         pid = process.pid
 
