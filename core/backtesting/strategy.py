@@ -73,56 +73,98 @@ class Strategy():
         self.week_day = week_day # Integer with monday as 0 and sunday as 6
         self.month_day = month_day # Number from 1 to 31
         
-    def back_testing(self, start_date=None, end_date=None):
+    def back_testing(self, start_date='2022-10-19', end_date='2022-11-10'):
         '''
         back_testing takes in the start and end time, then proceed to 
         test the performance of the strategy
         
         start_time, end_time: strings in the format of "yyyy-mm-dd"
         '''
-        start = start_date or '2013-03-28' #change these dates
-        end = end_date or '2018-02-05'
+        
 
-        self.start_date = start
-        self.end_date = end
-        self.current_date = datetime.strptime(start, "%Y-%m-%d").date()
-        end_date = datetime.strptime(end, "%Y-%m-%d").date()
+        self.start_date = start_date
+        self.end_date = end_date
+        self.current_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
         
         algoStartTime = time.time()
         print('\n started backtesting')
-        while self.current_date != end_date:
+        while self.current_date <= end_date:
             
             if(self.is_trading_date(self.current_date)): 
-                self.load_prices()
-                start_time = timedelta(hours=9, minutes=30) #the start time is hardcoded at the moment since all data starts at 9:30
-                #internal loop for each minute and hour
-                tick_time = timedelta(minutes=self.tick_rate)
-                end_time = timedelta(hours=15, minutes=59)
-                current_time = self.current_date+start_time
-                endtime = end_time+self.current_date
-                prevhour = 8
-                while current_time<=end_time:
-                    d = current_time.date()
-                    t = current_time.time()
+                #load today's file
+                #if an error arises just go to the next possible day (the file for the current, day doesnt exist)
+                try:
+                    self.load_prices()
+                except FileNotFoundError:
+                    self.current_date=self.next_nearest_trading_date()
+                    continue
+                #now self.data holds today's data as a pandas dataframe
+                
+                #simulate all the ticks for the current day
 
-                    self.tickdata = self.data[d.isoformat() + ' ' + t.isoformat(timespec='seconds')]
-                    if current_time.hour >prevhour:
-                        self.run_hourly()
-                        prevhour = current_time.hour
-                    self.run_tickly()
+                #first find the starting time
+                #the start time will be the first spot of the "time" column of the dataset
+                #note that it is a datetime object so it includes the current data as well and not just the time.
+                cur_time = self.data['time'].iloc[0]
+                cur_time = datetime.fromisoformat(cur_time)
+                while (True): #careful of the infinite loop. We will manually break if tick data does not exist for the current time and date
+                    
+                    #get the data for the current tick
+                    try:
+                        tick_data_mask = self.data['time']==datetime.isoformat(cur_time)
+                        self.tickdata = self.data[tick_data_mask]
+                    except:
+                        #if data cannot be loaded (data for the current date and time does not exist in the current loaded data)
+                        break
+                    #call the algo function (using the data from self.tickdata)
+
+                    '''
+                    Insert code for calling the algo here
+                    '''
+
+                    #update the current time based on the tick size.
+                    #note that all tick sizes should work.
+                    #if the tick is large enough that more than a day passes, the data will not yet be loaded.
+                    #In this case we would break from the loop as intended, and load_prices will be called again
+                    #if the tick size is smaller and the data does not exist, we get the same behavior.
+                    #this assumes that if the data doesn't exist for a current time, we finished all data for the current day.
+                    #the try-except block above checks if this is the case
+                    cur_time += timedelta(minutes=self.tick_rate)
 
 
-                self.run_daily()
-                if(self.week_day == self.current_date.weekday()): 
-                    self.run_weekly()
-                if(self.month_day == self.current_date.day): 
-                    self.run_monthly()
-                self.update_testing_data()
-                self.current_date += timedelta(days=1)
-                today = self.benchmark_df[self.benchmark_df['date']==self.current_date]
-                self.benchmark.append(
-                    today['Open']
-                    )
+
+                # the old loop is contained in this comment block
+                # self.load_prices()
+                # start_time = timedelta(hours=9, minutes=30) #the start time is hardcoded at the moment since all data starts at 9:30
+                # #internal loop for each minute and hour
+                # tick_time = timedelta(minutes=self.tick_rate)
+                # end_time = timedelta(hours=15, minutes=59)
+                # current_time = self.current_date+start_time
+                # end_time = end_time+self.current_date
+                # prevhour = 8
+                # while current_time<=end_time:
+                #     d = current_time.date()
+                #     t = current_time.time()
+
+                #     self.tickdata = self.data[d.isoformat() + ' ' + t.isoformat(timespec='seconds')]
+                #     if current_time.hour >prevhour:
+                #         self.run_hourly()
+                #         prevhour = current_time.hour
+                #     self.run_tickly()
+                #     current_time+=tick_time
+
+                # self.run_daily()
+                # if(self.week_day == self.current_date.weekday()): 
+                #     self.run_weekly()
+                # if(self.month_day == self.current_date.day): 
+                #     self.run_monthly()
+                # self.update_testing_data()
+                # self.current_date += timedelta(days=1)
+                # today = self.benchmark_df[self.benchmark_df['date']==self.current_date]
+                # self.benchmark.append(
+                #     today['Open']
+                #     )
             else:
                 self.current_date = self.next_nearest_trading_date(self.current_date)
         
