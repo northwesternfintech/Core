@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import shutil
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 import holidays
 from datetime import datetime, timedelta
@@ -12,8 +14,8 @@ import time
                     
 class Strategy():
     
-    def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None, 
-                 data_file_path=None,
+    def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None, tick_freq = 1,
+                 data_file_folder='filtered',
                  benchmark_file_path=None): 
         '''
         transaction_cost: float that determines the cost of every transaction
@@ -26,18 +28,25 @@ class Strategy():
             Note:   if date specified is not a trading date, execute the functions on 
                     the next nearest trading date
         '''
+
+        self.tick_rate = tick_freq #number of minutes between each tick
+
         self.start_balance = start_balance # benchmark for visualization
         self.portfolio = portfolio.portfolio(starting_balance = start_balance, 
                                    transaction_cost = transaction_cost)
-        self.current_time = None    # datetime object for tracking the date in backtesting
+        self.current_date = None    # datetime object for tracking the date in backtesting
+        self.current_time = None    # datetime object for tracking hourly time
         self.open_close = None      # a boolean for tracking if it's currently market open/close
                                     # True for open and False for close
         self.nyse_holidays = holidays.NYSE() # a dictionary storing all stock market holidays
-        self._data_file_path = data_file_path or '2013-2018.csv'
-        self.data = pd.read_csv(self._data_file_path)
+        self._data_file_folder = data_file_folder
+        ##self.data = pd.read_csv(self._data_file_folder) csv reading is outdated
         ###
         ### Parameters for storing statistical data for strategy
         ###
+        self.data = None #the data for the current day
+        self.tickdata = None #the data for the given tick
+
         self.benchmark_file_path = benchmark_file_path or 'US10yrsbond.csv'
         self.benchmark_df = pd.read_csv(self.benchmark_file_path)
         self.benchmark_df['date'] = pd.to_datetime(self.benchmark_df['Date'])
@@ -64,39 +73,100 @@ class Strategy():
         self.week_day = week_day # Integer with monday as 0 and sunday as 6
         self.month_day = month_day # Number from 1 to 31
         
-    def back_testing(self, start_time=None, end_time=None):
+    def back_testing(self, start_date='2022-10-19', end_date='2022-11-10'):
         '''
         back_testing takes in the start and end time, then proceed to 
         test the performance of the strategy
         
         start_time, end_time: strings in the format of "yyyy-mm-dd"
         '''
-        start = start_time or '2013-03-28'
-        end = end_time or '2018-02-05'
+        
 
-        self.start_time = start
-        self.end_time = end
-        self.current_time = datetime.strptime(start, "%Y-%m-%d").date()
-        end_time = datetime.strptime(end, "%Y-%m-%d").date()
+        self.start_date = start_date
+        self.end_date = end_date
+        self.current_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
         
         algoStartTime = time.time()
         print('\n started backtesting')
-        while self.current_time != end_time:
-            self.load_prices()
-            if(self.is_trading_date(self.current_time)): 
-                self.run_daily()
-                if(self.week_day == self.current_time.weekday()): 
-                    self.run_weekly()
-                if(self.month_day == self.current_time.day): 
-                    self.run_monthly()
-                self.update_testing_data()
-                self.current_time += timedelta(days=1)
-                today = self.benchmark_df[self.benchmark_df['date']==self.current_time]
-                self.benchmark.append(
-                    today['Open']
-                    )
+        while self.current_date <= end_date:
+            
+            if(self.is_trading_date(self.current_date)): 
+                #load today's file
+                #if an error arises just go to the next possible day (the file for the current, day doesnt exist)
+                try:
+                    self.load_prices()
+                except FileNotFoundError:
+                    self.current_date=self.next_nearest_trading_date()
+                    continue
+                #now self.data holds today's data as a pandas dataframe
+                
+                #simulate all the ticks for the current day
+
+                #first find the starting time
+                #the start time will be the first spot of the "time" column of the dataset
+                #note that it is a datetime object so it includes the current data as well and not just the time.
+                cur_time = self.data['time'].iloc[0]
+                cur_time = datetime.fromisoformat(cur_time)
+                while (True): #careful of the infinite loop. We will manually break if tick data does not exist for the current time and date
+                    
+                    #get the data for the current tick
+                    try:
+                        tick_data_mask = self.data['time']==datetime.isoformat(cur_time)
+                        self.tickdata = self.data[tick_data_mask]
+                    except:
+                        #if data cannot be loaded (data for the current date and time does not exist in the current loaded data)
+                        break
+                    #call the algo function (using the data from self.tickdata)
+
+                    '''
+                    Insert code for calling the algo here
+                    '''
+
+                    #update the current time based on the tick size.
+                    #note that all tick sizes should work.
+                    #if the tick is large enough that more than a day passes, the data will not yet be loaded.
+                    #In this case we would break from the loop as intended, and load_prices will be called again
+                    #if the tick size is smaller and the data does not exist, we get the same behavior.
+                    #this assumes that if the data doesn't exist for a current time, we finished all data for the current day.
+                    #the try-except block above checks if this is the case
+                    cur_time += timedelta(minutes=self.tick_rate)
+
+
+
+                # the old loop is contained in this comment block
+                # self.load_prices()
+                # start_time = timedelta(hours=9, minutes=30) #the start time is hardcoded at the moment since all data starts at 9:30
+                # #internal loop for each minute and hour
+                # tick_time = timedelta(minutes=self.tick_rate)
+                # end_time = timedelta(hours=15, minutes=59)
+                # current_time = self.current_date+start_time
+                # end_time = end_time+self.current_date
+                # prevhour = 8
+                # while current_time<=end_time:
+                #     d = current_time.date()
+                #     t = current_time.time()
+
+                #     self.tickdata = self.data[d.isoformat() + ' ' + t.isoformat(timespec='seconds')]
+                #     if current_time.hour >prevhour:
+                #         self.run_hourly()
+                #         prevhour = current_time.hour
+                #     self.run_tickly()
+                #     current_time+=tick_time
+
+                # self.run_daily()
+                # if(self.week_day == self.current_date.weekday()): 
+                #     self.run_weekly()
+                # if(self.month_day == self.current_date.day): 
+                #     self.run_monthly()
+                # self.update_testing_data()
+                # self.current_date += timedelta(days=1)
+                # today = self.benchmark_df[self.benchmark_df['date']==self.current_date]
+                # self.benchmark.append(
+                #     today['Open']
+                #     )
             else:
-                self.current_time = self.next_nearest_trading_date(self.current_time)
+                self.current_date = self.next_nearest_trading_date(self.current_date)
         
         self.calculate_daily_gain_loss()
 
@@ -111,8 +181,16 @@ class Strategy():
         file_path = os.path.join(file_path, 'backtester')
     
     def load_prices(self):
-        date = f'{self.current_time.year}-{self.current_time.month}-{self.current_time.day}'
-        self.data = self.data[self.data['date'] == date]
+        # Old code does not look like it will work with parquet files
+        date = f'{self.current_date.year}-{self.current_date.month}-{self.current_date.day}'
+        ##self.data = self.data[self.data['date'] == date]
+        #filename = self._data_file_folder + '\\' + date + '.parquet'
+        filepath = os.path.join(self._data_file_folder, date+'.parquet')
+        # table = pq.read_table(filepath)
+        # self.data = table.to_pandas()
+        self.data = pd.read_parquet(filepath)
+
+
 
     def log(self, msg, time): 
         '''
@@ -166,23 +244,23 @@ class Strategy():
             # plot self.total_daily_assets vs self.dates with create_plot()
             self.make_plot(x_data=self.dates, y_data=self.total_daily_assets_open, file_path=file_path, 
                             xlabel='Dates', ylabel='Total Daily Assets (USD)', 
-                            title=f'{self.current_time.strftime("%Y-%m-%d")}_total_daily_assets')
+                            title=f'{self.current_date.strftime("%Y-%m-%d")}_total_daily_assets')
         if(plot_daily_returns):
             # plot self.daily_gain_loss vs self.dates with create_plot()
             self.make_plot(x_data=self.dates, y_data=self.daily_gain_loss, file_path=file_path,
                             xlabel='Dates', ylabel='Percentage Change Assets', 
-                            title=f'{self.current_time.strftime("%Y-%m-%d")}_daily_return',
+                            title=f'{self.current_date.strftime("%Y-%m-%d")}_daily_return',
                             plot_together = self.benchmark)
 
         if(plot_monthly_returns):
             # plot self.daily_gain_loss vs self.dates with create_plot()
             self.make_plot(x_data=self.monthly_gain_loss['dates'], y_data=self.monthly_gain_loss['gain_loss'], file_path=file_path,
                             xlabel='Dates', ylabel='Percentage Change Assets', 
-                            title=f'{self.current_time.strftime("%Y-%m-%d")}_monthly_gain_loss')
+                            title=f'{self.current_date.strftime("%Y-%m-%d")}_monthly_gain_loss')
         # print(self.benchmark)
         # self.make_plot(x_data=self.dates, y_data=self.benchmark, file_path=file_path,
         #                     xlabel='Dates', ylabel='10 yr bond price', 
-        #                     title=f'{self.current_time.strftime("%Y-%m-%d")} 10 yr bond')
+        #                     title=f'{self.current_date.strftime("%Y-%m-%d")} 10 yr bond')
         return
 
     def make_log(self, file_path): 
@@ -237,7 +315,7 @@ class Strategy():
         self.total_daily_assets_open.append(self.calculate_total_assets(data_column='open'))
         self.total_daily_assets_close.append(self.calculate_total_assets(data_column='close'))
 
-        self.dates.append(self.current_time)
+        self.dates.append(self.current_date)
 
     def get_total_assets(self): return [self.total_daily_assets_open, self.total_daily_assets_close]
 
@@ -265,7 +343,7 @@ class Strategy():
         for h in holdings:
 
             # get the price of the holdings at the current date
-            str_date = self.current_time.strftime("%Y-%m-%d")
+            str_date = self.current_date.strftime("%Y-%m-%d")
             partial_data = data[data['Name']==h[0] and data['date']==str_date]
             curr_price = float(partial_data[data_column])
 
@@ -397,7 +475,7 @@ class Strategy():
         shares: float
         '''
         stock_price = self.data['date'==self.current_date & 'Name'==stock_name]
-        if self.current_time: 
+        if self.current_date: 
             stock_price = stock_price['open']
         else:
             stock_price = stock_price['close']
@@ -436,6 +514,18 @@ class Strategy():
         Should be executed before market open every virtual day
         '''
         # should be used for placing at-the-close orders and stock selection
+        pass
+
+    def run_tickly(self):
+        '''
+        This method is overided by the designer. Executed on each tick. By default each minute.
+        '''
+        pass
+
+    def run_hourly(self):
+        '''
+        Overrided by the designer, executes at the first instance where the hour changes from one hour to the next (i.e., 9AM to 10AM)    
+        '''
         pass
     
     def run_daily(self):
