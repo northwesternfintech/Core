@@ -11,7 +11,6 @@ import asyncio
 import schedule
 import datetime
 import os
-import threading
 
 async def main(coins):  # TODO: Don't think this needs to be async
     with cf.ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
@@ -21,7 +20,8 @@ async def main(coins):  # TODO: Don't think this needs to be async
         queue_lvl2 = multiprocessing.Queue()
 
         async def queue_to_csv():
-            pd.concat([queue_lvl1.get(), queue_lvl2.get()]).to_csv(r"/Users/jaypark/Downloads/btc_output.csv")
+            # TODO: Replace the empty string input for .to_csv() to the directory for desired output file
+            pd.concat([queue_lvl1.get(), queue_lvl2.get()]).to_csv("")
             await asyncio.sleep(0.1)
 
         loop = asyncio.get_event_loop()  # or asyncio.get_running_loop()
