@@ -10,7 +10,7 @@ import regex as re
 import pandas as pd
 import websockets
 
-from web_socket import WebSocket
+from .web_socket import WebSocket
 
 # Build Websocket Class
 class BinanceWebSocket(WebSocket):
@@ -57,7 +57,7 @@ class BinanceWebSocket(WebSocket):
 
     async def async_run(self):
         try:
-            async with websockets.connect('wss://stream.binance.com:9443/stream?', max_size = 1_000_000_000) as websocket:
+            async with websockets.connect('wss://stream.binance.us:9443/stream?', max_size = 1_000_000_000) as websocket:
                 await websocket.send(json.dumps(self.sub_message))
                 first = True
                 while True:
@@ -128,11 +128,9 @@ async def main(coins):
     bwr = BinanceWebSocket(q, r, coins)
     await bwr.run()  # TODO: Don't access private methods
 
-q = multiprocessing.Queue()
-r = multiprocessing.Queue()
-coins = ['BTC-USDT', 'ETH-USDT']
-bwr = BinanceWebSocket(q, r,coins)
-bwr.run()
-
-
-        
+# q = multiprocessing.Queue()
+# r = multiprocessing.Queue()
+# coins = ['BTC-USDT', 'ETH-USDT']
+# bwr = BinanceWebSocket(q, r, coins)
+# bwr.run()
+#

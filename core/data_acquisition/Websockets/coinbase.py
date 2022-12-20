@@ -12,7 +12,7 @@ import requests
 import websockets
 from scipy.fft import idst
 
-from web_socket import WebSocket
+from .web_socket import WebSocket
 
 
 # Build Coinbase Websocket Class 
@@ -98,14 +98,14 @@ class CoinbaseWebSocket(WebSocket):
         
 
 # Async Script Start
-async def main(coins): 
+async def main(coins):
     q = multiprocessing.Queue()
     r = multiprocessing.Queue()
     cwr = CoinbaseWebSocket(q, r, coins)
     await cwr.async_run()  # TODO: Don't access private methods
 
-q = multiprocessing.Queue()
-r = multiprocessing.Queue()
-coins = ['BTC-USDT', 'ETH-USDT']
-cwr = CoinbaseWebSocket(q, r,coins)
-cwr.run()
+# q = multiprocessing.Queue()
+# r = multiprocessing.Queue()
+# coins = ['BTC-USDT', 'ETH-USDT']
+# cwr = CoinbaseWebSocket(q, r,coins)
+# cwr.run()
