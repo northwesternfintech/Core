@@ -44,5 +44,4 @@ class WebSocket(ABC): # TODO: Decide whether its "websocket" or "web socket"
         await self.async_run()
 
     async def run(self):  # TODO: Add docstring for purpose
-        # asyncio.run(self.main())
-        await self.main()
+        asyncio.run(self.main())

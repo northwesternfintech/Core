@@ -8,6 +8,7 @@ from Websockets.binance import BinanceWebSocket
 # from kraken import KrackenWebSocket
 import pandas as pd
 import asyncio
+import time
 import schedule
 import datetime
 import os
@@ -20,8 +21,10 @@ async def main(coins):  # TODO: Don't think this needs to be async
         queue_lvl2 = multiprocessing.Queue()
 
         async def queue_to_csv():
-            # TODO: Replace the empty string input for .to_csv() to the directory for desired output file
-            pd.concat([queue_lvl1.get(), queue_lvl2.get()]).to_csv("")
+            # TODO: Replace the empty path string to the directory for desired output file
+            path = "/Users/jaypark/Downloads/"
+            filename = "RAW_CSV_OUTPUT_" + str(time.time()) + ".csv"
+            pd.concat([queue_lvl1.get(), queue_lvl2.get()]).to_csv(path + filename)
             await asyncio.sleep(0.1)
 
         loop = asyncio.get_event_loop()  # or asyncio.get_running_loop()
@@ -34,11 +37,11 @@ async def main(coins):  # TODO: Don't think this needs to be async
             # Initializing web sockets as the program traverses through the try except
             # layer to avoid unnecessarily initializing websockets
             binance = BinanceWebSocket(queue_lvl1, queue_lvl2, coins)
-            executor.submit(await binance.run())
+            executor.submit(await binance.main())
         except Exception as e:
             try:
                 coinbase = CoinbaseWebSocket(queue_lvl1, queue_lvl2, coins)
-                executor.submit(await coinbase.run())
+                executor.submit(await coinbase.main())
             except Exception as e:
                 # Try another websocket that was initialized, and if that doesn't work, layer in another try-except
                 # In the end, if none of the websockets work, use an API
