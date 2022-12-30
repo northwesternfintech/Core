@@ -55,7 +55,7 @@ class BollingerBandsMultiStock:
         total /= self.daysInMovingAverage
         return total**0.5
 
-    def update_all(self, newData):
+    def update(self, newData):
         """
         generic update method that calls update on every ticker
         """
@@ -68,14 +68,15 @@ class BollingerBandsMultiStock:
             newDay = True
 
         for ticker, newPrice in newData.items():
-            self.update(ticker, newPrice, newDay)
+            self.update_single(ticker, newPrice, newDay)
         self.ticks += 1
+        return self.orders
         # print("Typical Prices:", self.typicalPrices)
         # print("Bands:", self.bands)
         # print("Orders:", self.orders)
         # print()
 
-    def update(self, ticker, price, newDay):
+    def update_single(self, ticker, price, newDay):
         """
         Update method called every tick. Just takes in the stock's price at the time of the tick
         """

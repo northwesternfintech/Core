@@ -51,7 +51,7 @@ class portfolio:
         stock_name: string
         """
         if self.validate_order(stock_price, shares):
-            if shares > 0:
+            if shares > 0:  # buy
                 self.transactions.append(["buy", stock_name, stock_price, shares, 0])
                 self.balance -= stock_price * shares * (1 + self.transaction_cost)
 

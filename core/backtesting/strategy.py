@@ -163,8 +163,9 @@ class Strategy:
                         ticker_data_dict[ticker] = tickerdata["open"].iloc[
                             0
                         ]  # get the "open" price for the ticker
-                    self.algo.update(ticker_data_dict)
-
+                    tickOrders = self.algo.update(ticker_data_dict)
+                    for order in tickOrders:
+                        self.portfolio.place_order()  # this needs to be implemented
                     # update the current time based on the tick size.
                     # note that all tick sizes should work.
                     # if the tick is large enough that more than a day passes, the data will not yet be loaded.
