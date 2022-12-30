@@ -5,9 +5,20 @@ import sys
 import requests
 
 
-def slack_bot(CPUUtil, RAMUtil):
+def slack_bot(CPUUtil, RAMUtil, diskUtil):
     url = "https://hooks.slack.com/services/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"
-    message = "CPU Usage: " + CPUUtil + "%" + "\n Memory Usage: " + RAMUtil + "%"
+    message = (
+        "CPU Usage: "
+        + CPUUtil
+        + "%"
+        + "\n Memory Usage: "
+        + RAMUtil
+        + "%"
+        + "\n Disk Usage: "
+        + diskUtil
+        + "%"
+        + "\n"
+    )
     title = f"Server Status Test"
     slack_data = {
         "attachments": [
