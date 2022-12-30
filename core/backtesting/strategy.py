@@ -11,24 +11,33 @@ import portfolio
 import numpy as np
 import time
 
-                    
+# imports for algorithms we've made
+import BollingerBandsMultiStock
+
 class Strategy():
     
-    def __init__(self, transaction_cost=None, start_balance=None, week_day=None, month_day=None, tick_freq = 1,
-                 data_file_folder='filtered',
-                 benchmark_file_path=None): 
+    def __init__(self, algo,
+                transaction_cost=None, 
+                start_balance=None, week_day=None, month_day=None, tick_freq = 1,
+                data_file_folder='filtered',
+                benchmark_file_path=None,
+                tickers=None): 
         '''
+        algo: the string name for the 
         transaction_cost: float that determines the cost of every transaction
         start_balance: the balance that the strategy is starting with
-        
+        tick_freq: the number of minutes between each tick. Make sure the algo and backtester tick rates match (idk what will happen if they dont)
+
         week_day:   every week, when it comes to the week_day specified, execute
                     the run_weekly function. Default is Monday.
         month_day:  every month, when it comes to the month_day specified, execute
                     the run_monthly function. Default is 1st.
             Note:   if date specified is not a trading date, execute the functions on 
                     the next nearest trading date
+        tickers: an optional list of tickers to use for the algo (make sure it matches the one used in the algo)
         '''
-
+        self.algo = algo
+        
         self.tick_rate = tick_freq #number of minutes between each tick
 
         self.start_balance = start_balance # benchmark for visualization
@@ -72,6 +81,10 @@ class Strategy():
 
         self.week_day = week_day # Integer with monday as 0 and sunday as 6
         self.month_day = month_day # Number from 1 to 31
+
+        #the list of tickers we will be working with
+        self.tickers = tickers
+
         
     def back_testing(self, start_date='2022-10-19', end_date='2022-11-10'):
         '''
@@ -118,10 +131,14 @@ class Strategy():
                         #if data cannot be loaded (data for the current date and time does not exist in the current loaded data)
                         break
                     #call the algo function (using the data from self.tickdata)
-
-                    '''
-                    Insert code for calling the algo here
-                    '''
+                    
+                    ticker_data_dict = {}
+                    if self.tickers==None: self.tickers = self.data['name'].unique()
+                    for ticker in self.tickers:
+                        tickerdata = self.tickdata['name']==ticker #the mask for the data for this specific ticker
+                        tickerdata = self.tickdata[tickerdata] #get the row for the given ticker
+                        ticker_data_dict[ticker] = tickerdata['open'].iloc[0] #get the "open" price for the ticker
+                    self.algo.update(ticker_data_dict)
 
                     #update the current time based on the tick size.
                     #note that all tick sizes should work.
