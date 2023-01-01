@@ -574,15 +574,6 @@ class Strategy:
     # below are methods that the designer of strategy should override
     # developlers shouldn't modified anything below this line
     ################################################################################
-    """
-    Important Note to Users:
-
-                    Since we only have open/close data at the moment, 
-                    we can only place at-the-open/at-the-close orders.
-                    Users should place the orders in the corresponding
-                    functions below.
-
-    """
     ################################################################################
 
     def on_market_close(self):
