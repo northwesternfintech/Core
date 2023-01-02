@@ -69,8 +69,10 @@ class BollingerBandsMultiStock:
             newDay = True
 
         for ticker, newPrice in newData.items():
-            self.updateSingle(ticker=ticker, newPrice=newPrice, newDay=newDay)
+            self.updateSingle(ticker=ticker, price=newPrice, newDay=newDay)
         self.ticks += 1
+        
+        return self.orders
         # print("Typical Prices:", self.typicalPrices)
         # print("Bands:", self.bands)
         # print("Orders:", self.orders)
@@ -84,12 +86,13 @@ class BollingerBandsMultiStock:
         "ticker": string, the ticker of the stock we're updating
         "price": float, the price of the stock at the time of the tick
         """
+        ticker = kwargs["ticker"]
+        price = float(kwargs["price"])
         if kwargs["newDay"]:
             # handle all new day management stuff
             # if we're at a new day, add our current day's data to TP and reset the dayData
             # print(ticker, self.dayData[ticker])
-            ticker = kwargs["ticker"]
-            price = kwargs["price"]
+            
             self.typicalPrices[ticker].append(sum(self.dayData[ticker]) / 4)
             self.dayData[ticker] = [-1, price, price, price]
 

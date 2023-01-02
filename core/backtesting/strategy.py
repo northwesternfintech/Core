@@ -124,7 +124,7 @@ class Strategy:
         print("\n started backtesting")
         while self.current_date <= end_date:
 
-            if self.is_trading_date(self.current_date):
+            if self.is_trading_hour(self.current_date):
                 # load today's file
                 # if an error arises just go to the next possible day (the file for the current, day doesnt exist)
                 try:
@@ -159,9 +159,9 @@ class Strategy:
                     ticker_data_dict = dict(zip(self.tickers,self.tickdata['open'].to_list()))
                     
                     tickOrders = self.algo.update(ticker_data_dict)
-                    
-                    for order in tickOrders:
-                        self.portfolio.place_order()  # this needs to be implemented
+                    print(tickOrders)
+                    # for order in tickOrders:
+                    #     self.portfolio.place_order()  # this needs to be implemented
                         
                     cur_time += timedelta(minutes=self.tick_rate)
                     break
@@ -520,15 +520,17 @@ class Strategy:
         self.sharpe_ratio = expected_differential / std
         return True
 
-    def is_trading_date(self, date):
+    def is_trading_hour(self, date):
         """
         Verify if the given date is a trading day, return boolean
         Should only be called by back_testing()
 
         date: datetime object
         """
-        return not date in self.nyse_holidays  # checking if date exists in holiday dict
-
+        if not date in self.nyse_holidays:  # checking if date exists in holiday dict
+            return False
+        
+            
     def next_nearest_trading_date(self, date):
         """
         Return the next nearest trading date as a datetime object
