@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import shutil
-import pyarrow as pa
-import pyarrow.parquet as pq
+# import pyarrow as pa
+# import pyarrow.parquet as pq
 
 import holidays
 from datetime import datetime, timedelta
@@ -42,7 +42,6 @@ class Strategy:
                     the next nearest trading date
         tickers: an optional list of tickers to use for the algo (make sure it matches the one used in the algo)
         """
-        self.algo = algo
 
         self.tick_rate = tick_freq  # number of minutes between each tick
 
@@ -99,7 +98,14 @@ class Strategy:
         self.month_day = month_day  # Number from 1 to 31
 
         # the list of tickers we will be working with
-        self.tickers = tickers
+        self.tickers = ["CSCO","UAL","TROW","ISRG","NVR","TPR","DVN","CE","MRO","BA","VRTX","GILD","EQIX","TER","MDT","V","QRVO","A","FOX","FLT","MO","CTRA","SWKS","ENPH","MCHP","CDNS","MSCI","CHTR","EIX","KDP","BBY","GEN","WBA","LVS","HCA","AJG","DTE","C","T","CF","DISH","MGM","HUM","CBOE","CFG","APH","SYY","MSI","FCX","ADM","OGN","LH","PKI","LNT","BAC","LNC","PSX","GPN","PPG","TECH","IRM","IQV","ESS","WBD","HAL","STZ","DXC","PARA","ADI","F","ADBE","CPRT","TDG","TFX","ULTA","ARE","SYK","CB","TSN","GNRC","PEP","PEG","NOW","LLY","COST","REG","NWS","LOW","MDLZ","BKNG","ZBRA","FMC","XEL","AIZ","MET","FTV","DLR","ACGL","XRAY","FAST","TJX","SNA","MPC","BR","D","MRK","STX","NOC","BXP","KHC","IPG","UNP","ALLE","ABBV","CDAY","ORCL","ECL","ETR","EBAY","SBUX","IR","AMT","INTU","DPZ","PAYC","CMA","PG","CAT","ODFL","MCD","MNST","AMZN","INTC","PNR","GLW","BDX","KMI","CSGP","PWR","APTV","BBWI","DXCM","EXR","WELL","HOLX","EXPD","GM","TXN","VRSK","SJM","TMO","OXY","RL","CCI","MMM","MOS","FTNT","HSY","JNPR","DHI","ED","ES","ADSK","GL","INVH","IP","EXPE","KO","PCAR","WDC","LUMN","PYPL","NEE","UPS","ELV","EMR","MSFT","ANSS","CTAS","BIO","UDR","CTLT","WEC","AME","IT","DD","ACN","VRSN","EW","CMG","AWK","COO","SHW","HPQ","AMAT","CCL","MLM","AVY","AAP","ATVI","EVRG","EA","DE","SPG","AMD","KLAC","NDAQ","URI","WHR","RTX","NXPI","PNC","KMX","SEDG","WRK","MTCH","BIIB","NVDA","CHRW","ROP","IDXX","EXC","HES","HD","ALB","VLO","AON","ZTS","FDX","DG","TYL","HIG","CMS","CAG","INCY","SCHW","HSIC","AZO","AXP","HPE","DFS","SEE","HRL","SO","FRT","ZBH","FRC","CME","XOM","AMP","CVX","CMCSA","PCG","PNW","ICE","BEN","UHS","BKR","EMN","SBAC","ROK","PTC","NRG","NSC","NKE","FIS","FANG","VTR","MAS","RF","ETSY","AMCR","TAP","MAR","XYL","CMI","MTD","KR","PLD","IBM","USB","BSX","LKQ","FBHS","LIN","ITW","EOG","KMB","PEAK","SPGI","NEM","WFC","CTVA","EL","GS","GD","CNP","PM","RE","MCO","CLX","CAH","MPWR","DGX","AVB","DIS","CBRE","GE","HII","LDOS","ALL","ETN","ALGN","NFLX","SBNY","LEN","FITB","WST","GWW","TRGP","NTRS","CVS","AOS","FE","ABC","JPM","ABT","OMC","COF","TSCO","PH","HST","JBHT","MRNA","TSLA","MOH","ATO","COP","DHR","CNC","MCK","TXT","MTB","FDS","VTRS","AKAM","ROL","RMD","WRB","GOOGL","BRO","ANET","PAYX","ALK","DRI","ILMN","META","AAL","MAA","MMC","FOXA","POOL","CZR","FFIV","VNO","CINF","VMC","MKTX","SRE","LHX","ORLY","IVZ","RCL","PXD","SNPS","GOOG","EPAM","SIVB","NDSN","YUM","EQT","LYV","PFE","AVGO","DUK","REGN","CL","VFC","VZ","JCI","AMGN","TEL","JKHY","ADP","ON","STT","RSG","IFF","CARR","TRMB","QCOM","LYB","GIS","PHM","ROST","LUV","LW","MS","CPB","OKE","BK","J","SYF","CHD","HWM","MHK","TFC","DAL","APA","K","AFL","CSX","NI","CPT","PFG","NCLH","ZION","RJF","HBAN","UNH","PRU","GPC","WTW","FISV","WMB","EQR","DVA","AIG","MA","HON","VICI","O","NWSA","TTWO","AES","SLB","TT","TGT","AAPL","MKC","OTIS","CEG","TDY","WY","APD","GRMN","AEE","HLT","DLTR","STE","HAS","TMUS","WMT","NTAP","KIM","BAX","LMT","ABMD","KEY","KEYS","BMY","PSA","WYNN","RHI","EFX","NUE","PKG","WAB","CTSH","SWK","CRL","MU","TRV","L","AEP","CI","DOW","CDW","BALL","JNJ","WM","DOV","CRM","PGR","WAT","IEX","BWA","LRCX","NWL","BLK","PPL"]
+        
+        self.algo = algo.BollingerBandsMultiStock(tickers=self.tickers,
+                                                  MAL=20,
+                                                  bandSD=2,
+                                                  dayConst=390,
+                                                  clearDataLen=10000)
+
 
     def back_testing(self, start_date="2022-10-19", end_date="2022-11-10"):
         """
@@ -113,7 +119,7 @@ class Strategy:
         self.end_date = end_date
         self.current_date = datetime.strptime(start_date, "%Y-%m-%d").date()
         end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
-
+        
         algoStartTime = time.time()
         print("\n started backtesting")
         while self.current_date <= end_date:
@@ -124,7 +130,7 @@ class Strategy:
                 try:
                     self.load_prices()
                 except FileNotFoundError:
-                    self.current_date = self.next_nearest_trading_date()
+                    self.current_date = self.next_nearest_trading_date(self.current_date)
                     continue
                 # now self.data holds today's data as a pandas dataframe
 
@@ -134,46 +140,31 @@ class Strategy:
                 # the start time will be the first spot of the "time" column of the dataset
                 # note that it is a datetime object so it includes the current data as well and not just the time.
                 cur_time = self.data["time"].iloc[0]
-                cur_time = datetime.fromisoformat(cur_time)
+                cur_time = datetime.fromisoformat(str(cur_time))
                 while (
                     True
-                ):  # careful of the infinite loop. We will manually break if tick data does not exist for the current time and date
-
+                ):  
+                    # careful of the infinite loop. We will manually break if tick data does not exist for the current time and date
                     # get the data for the current tick
                     try:
-                        tick_data_mask = self.data["time"] == datetime.isoformat(
-                            cur_time
-                        )
+                        tick_data_mask = self.data["time"] == datetime.isoformat(cur_time)
                         self.tickdata = self.data[tick_data_mask]
                     except:
                         # if data cannot be loaded (data for the current date and time does not exist in the current loaded data)
                         break
-                    # call the algo function (using the data from self.tickdata)
-
                     ticker_data_dict = {}
                     if self.tickers == None:
                         self.tickers = self.data["name"].unique()
-                    for ticker in self.tickers:
-                        tickerdata = (
-                            self.tickdata["name"] == ticker
-                        )  # the mask for the data for this specific ticker
-                        tickerdata = self.tickdata[
-                            tickerdata
-                        ]  # get the row for the given ticker
-                        ticker_data_dict[ticker] = tickerdata["open"].iloc[
-                            0
-                        ]  # get the "open" price for the ticker
+                    
+                    ticker_data_dict = dict(zip(self.tickers,self.tickdata['open'].to_list()))
+                    
                     tickOrders = self.algo.update(ticker_data_dict)
+                    
                     for order in tickOrders:
                         self.portfolio.place_order()  # this needs to be implemented
-                    # update the current time based on the tick size.
-                    # note that all tick sizes should work.
-                    # if the tick is large enough that more than a day passes, the data will not yet be loaded.
-                    # In this case we would break from the loop as intended, and load_prices will be called again
-                    # if the tick size is smaller and the data does not exist, we get the same behavior.
-                    # this assumes that if the data doesn't exist for a current time, we finished all data for the current day.
-                    # the try-except block above checks if this is the case
+                        
                     cur_time += timedelta(minutes=self.tick_rate)
+                    break
 
                 # the old loop is contained in this comment block
                 # self.load_prices()
@@ -386,6 +377,9 @@ class Strategy:
         )
 
         self.dates.append(self.current_date)
+
+    def load_prices(self):
+        self.data = pd.read_parquet('/Users/jialechen/Documents/GitHub/Core/core/backtesting/filtered/'+f'{self.current_date}.parquet')
 
     def get_total_assets(self):
         return [self.total_daily_assets_open, self.total_daily_assets_close]
@@ -633,12 +627,16 @@ class Strategy:
         pass
 
 
+import BollingerBandsMultiStock
+
 benchmark = "/Users/jialechen/Documents/GitHub/Core/core/backtesting/US10yrsbond.csv"
 path = "/Users/jialechen/Documents/GitHub/Core/core/backtesting/2013-2018.csv"
 s = Strategy(
+    algo=BollingerBandsMultiStock,
     transaction_cost=0.05,
     start_balance=10000,
-    data_file_path=path,
+    data_file_folder="filtered",
     benchmark_file_path=benchmark,
 )
+
 s.back_testing()
