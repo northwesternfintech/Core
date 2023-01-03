@@ -3,7 +3,7 @@ import math
 
 
 class BollingerBandsMultiStock:
-    def __init__(self, tickers, dayConst=60, MAL=20, bandSD=2, clearDataLen=10000):
+    def __init__(self, **kwargs):
         """
         Constructor for multi stock Bollinger Bands algo. If the stock price exceeds the upper band, add a sell order,
         and if it goes below the lower band, add a buy order.
@@ -18,6 +18,7 @@ class BollingerBandsMultiStock:
         self.dayData = {}
         # stores ticker: lower band, upper band
         self.bands = {}
+        tickers = kwargs["tickers"]
         for ticker in tickers:
             self.data[ticker] = []
             self.orders[ticker] = []
@@ -27,15 +28,15 @@ class BollingerBandsMultiStock:
 
         self.ticks = 0
         # stores how many ticks we want there to be in each day. By default set to 60, or every hour
-        self.ticksPerDay = dayConst
+        self.ticksPerDay = kwargs["dayConst"]
         # stores how many previous days' data we want to use in our moving average. By default set to 20
-        self.daysInMovingAverage = MAL
+        self.daysInMovingAverage = kwargs["MAL"]
         # stores how many standard deviations we want to use to calculate our upper and lower bands. By default set to 2
-        self.bandSigmaFromMean = bandSD
+        self.bandSigmaFromMean = kwargs["bandSD"]
         # stores when our next day stats (in ticks)
-        self.nextDayStart = dayConst
+        self.nextDayStart = kwargs["dayConst"]
         # variable to clear our least recent orders so that the length of the list doesnt get too big. By default set to 10,000
-        self.clearDataLen = clearDataLen
+        self.clearDataLen = kwargs["clearDataLen"]
 
     def clear_orders(self, ticker):
         """
@@ -68,22 +69,30 @@ class BollingerBandsMultiStock:
             newDay = True
 
         for ticker, newPrice in newData.items():
-            self.update_single(ticker, newPrice, newDay)
+            self.updateSingle(ticker=ticker, price=newPrice, newDay=newDay)
         self.ticks += 1
+        
         return self.orders
         # print("Typical Prices:", self.typicalPrices)
         # print("Bands:", self.bands)
         # print("Orders:", self.orders)
         # print()
 
-    def update_single(self, ticker, price, newDay):
+    def updateSingle(self, **kwargs):
         """
-        Update method called every tick. Just takes in the stock's price at the time of the tick
+        Update method called every tick. Just takes in the stock's price at the time of the tick. \n
+        Inputs:
+        "newDay": boolean, whether or not we're at a new day
+        "ticker": string, the ticker of the stock we're updating
+        "price": float, the price of the stock at the time of the tick
         """
-        if newDay:
+        ticker = kwargs["ticker"]
+        price = float(kwargs["price"])
+        if kwargs["newDay"]:
             # handle all new day management stuff
             # if we're at a new day, add our current day's data to TP and reset the dayData
             # print(ticker, self.dayData[ticker])
+            
             self.typicalPrices[ticker].append(sum(self.dayData[ticker]) / 4)
             self.dayData[ticker] = [-1, price, price, price]
 
@@ -110,34 +119,12 @@ class BollingerBandsMultiStock:
             self.bands[ticker][1] = upperBand
 
             if price > upperBand:
-                # print("ADDING SELL ORDER")
+                print("ADDING SELL ORDER")
                 self.orders[ticker].append("SELL")
             elif price < lowerBand:
-                # print("ADDING BUY ORDER")
+                print("ADDING BUY ORDER")
                 self.orders[ticker].append("BUY")
             # print()
 
             if len(self.orders[ticker]) > self.clearDataLen:
                 self.orders[ticker].pop(0)
-
-
-"""BB = BollingerBandsMultiStock(["A", "B", "C"], 4, 4, 2, 100)
-BB.update_all({"A": 4.0, "B": 6.0, "C": 8.0})
-BB.update_all({"A": 2.0, "B": 16, "C": 7})
-BB.update_all({"A": 12, "B": 9, "C": 11})
-BB.update_all({"A": 4.0, "B": 3.3, "C": 8.7})
-
-BB.update_all({"A": 3.1, "B": 6.4, "C": 9.23})
-BB.update_all({"A": 15.4, "B": 19.3, "C": 10.1})
-BB.update_all({"A": 4.2, "B": 4.2, "C": 1.1})
-BB.update_all({"A": 3, "B": 6, "C": 8})
-
-BB.update_all({"A": 3.0, "B": 6.0, "C": 8.0})
-BB.update_all({"A": 4, "B": 16, "C": 7})
-BB.update_all({"A": 12, "B": 9, "C": 11})
-BB.update_all({"A": 5, "B": 3.3, "C": 8.7})
-
-BB.update_all({"A": 3.1, "B": 6.4, "C": 9.23})
-BB.update_all({"A": 15.4, "B": 19.3, "C": 10.1})
-BB.update_all({"A": 4.2, "B": 4.2, "C": 1.1})
-BB.update_all({"A": 3, "B": 6, "C": 8})"""
