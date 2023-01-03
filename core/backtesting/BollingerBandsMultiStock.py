@@ -119,34 +119,12 @@ class BollingerBandsMultiStock:
             self.bands[ticker][1] = upperBand
 
             if price > upperBand:
-                # print("ADDING SELL ORDER")
+                print("ADDING SELL ORDER")
                 self.orders[ticker].append("SELL")
             elif price < lowerBand:
-                # print("ADDING BUY ORDER")
+                print("ADDING BUY ORDER")
                 self.orders[ticker].append("BUY")
             # print()
 
             if len(self.orders[ticker]) > self.clearDataLen:
                 self.orders[ticker].pop(0)
-
-
-"""BB = BollingerBandsMultiStock(["A", "B", "C"], 4, 4, 2, 100)
-BB.update_all({"A": 4.0, "B": 6.0, "C": 8.0})
-BB.update_all({"A": 2.0, "B": 16, "C": 7})
-BB.update_all({"A": 12, "B": 9, "C": 11})
-BB.update_all({"A": 4.0, "B": 3.3, "C": 8.7})
-
-BB.update_all({"A": 3.1, "B": 6.4, "C": 9.23})
-BB.update_all({"A": 15.4, "B": 19.3, "C": 10.1})
-BB.update_all({"A": 4.2, "B": 4.2, "C": 1.1})
-BB.update_all({"A": 3, "B": 6, "C": 8})
-
-BB.update_all({"A": 3.0, "B": 6.0, "C": 8.0})
-BB.update_all({"A": 4, "B": 16, "C": 7})
-BB.update_all({"A": 12, "B": 9, "C": 11})
-BB.update_all({"A": 5, "B": 3.3, "C": 8.7})
-
-BB.update_all({"A": 3.1, "B": 6.4, "C": 9.23})
-BB.update_all({"A": 15.4, "B": 19.3, "C": 10.1})
-BB.update_all({"A": 4.2, "B": 4.2, "C": 1.1})
-BB.update_all({"A": 3, "B": 6, "C": 8})"""
