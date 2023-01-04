@@ -39,7 +39,7 @@ class ccxtws(WebSocket):
                         self.maindf = pd.concat([self.maindf, tempDataFrame])
                         # self.queue_1.put(df)
                         self.shittyCounter += 1
-                        if self.shittyCounter > 10:
+                        if self.shittyCounter > 5000:
                             self.maindf.to_csv(path + filename)
                             self.shittyCounter = 0
                             
