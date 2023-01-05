@@ -61,5 +61,5 @@ def activate(exchanges, coins):
 
 exchanges = ["kraken", "binance", "kucoin", "gemini", "coinbase"]
 coins = ["BTC/USDT"]
-#print(ccxt.kraken().fetchTickers(symbols=coins))
+(ccxt.kraken().fetchTickers(symbols=coins))
 activate(exchanges, coins)

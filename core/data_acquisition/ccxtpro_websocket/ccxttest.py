@@ -26,7 +26,6 @@ class ccxtws():
             return
         try:
             while True:
-                print(self.exchange)
                 m1Data = self.exchange.fetchTickers(symbols=self.coins)
                 msgData = {}
                 currDateTime = []
