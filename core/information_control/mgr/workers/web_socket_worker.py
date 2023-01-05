@@ -4,6 +4,7 @@ import functools
 import json
 import signal
 from typing import List
+import time
 
 import zmq.asyncio
 
@@ -62,6 +63,8 @@ class WebSocketWorker:
         while True:
             data = await queue.get()
             queue.task_done()
+
+            data["time"] = time.time()
 
             message = f"{data['ticker']} {json.dumps(data)}".encode('utf-8')
             await self._socket.send(message)

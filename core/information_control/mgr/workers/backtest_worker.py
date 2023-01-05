@@ -4,6 +4,7 @@ import functools
 import json
 import signal
 from typing import List, Optional
+import time
 
 import zmq
 import zmq.asyncio
@@ -60,6 +61,11 @@ class BacktestWorker:
         while True:
             data = await self._live_queue.get()
             self._live_queue.task_done()
+            t = time.time()
+            d = json.loads(data[9:])
+            
+            if "time" in d:
+                print(t - int(d['time']))
             print(data)  # Will eventually make call to backtester
 
     async def _run_live(self, **kwargs):
@@ -127,8 +133,7 @@ def cli_run():
         help="'historical' or 'live''"
     )
     args, unknown = parser.parse_known_args()
-    print(args)
-    print(unknown)
+    print("HERE")
     kwargs = {}
     
     while unknown:
@@ -140,6 +145,6 @@ def cli_run():
         while unknown and not unknown[0].startswith('--'):
             arg = unknown.pop(0)
             kwargs[arg_name].append(arg)
-
+    print(args, kwargs)
     worker = BacktestWorker()
     worker.run(args.mode, **kwargs)

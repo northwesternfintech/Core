@@ -29,8 +29,6 @@ class NUFTConfig:
         server_port = self.config['server'].get('port')
         server_host = self.config['server'].get('host')
 
-        server_port = '5000'
-
         if not (server_port and server_host):
             raise ClickException("Missing server port or host in config!")
 
@@ -145,6 +143,8 @@ def web_socket_start(ctx, ticker_names):
     if res.status_code == 200:
         print(f"Started {ticker_names} at {pid}")
     else:
+        print(res.status_code)
+        print(res.text)
         raise ClickException(res.text)
 
 
