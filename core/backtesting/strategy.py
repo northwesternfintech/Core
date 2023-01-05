@@ -5,7 +5,7 @@ import shutil
 # import pyarrow as pa
 # import pyarrow.parquet as pq
 
-import holidays
+import pandas_market_calendars as mcal
 from datetime import datetime, timedelta
 import portfolio
 import numpy as np
@@ -23,9 +23,9 @@ class Strategy:
         start_balance=None,
         tick_freq=1,
         data_file_folder="filtered",
-        benchmark_file_path=None,
         tickers=None,
         name='algo',
+        exchange='NYSE'
     ):
         """
         algo: the string name for the
@@ -50,10 +50,8 @@ class Strategy:
             None  # a boolean for tracking if it's currently market open/close
         )
         self.name=name
-        # True for open and False for close
-        self.nyse_holidays = (
-            holidays.NYSE()
-        )  # a dictionary storing all stock market holidays
+        
+        self.cal = mcal.get_calendar(exchange)
         self._data_file_folder = data_file_folder
         ##self.data = pd.read_csv(self._data_file_folder) csv reading is outdated
         ###
@@ -81,10 +79,6 @@ class Strategy:
             "gain_loss": [],
         }  # Dictionary of two lists / [0] -> dates / [1] -> monthly gain loss
 
-        self.dates = (
-            []
-        )  # list of dates / index maps to index of self.total_daily_assets
-
         # the list of tickers we will be working with
         self.tickers = ["CSCO","UAL","TROW","ISRG","NVR","TPR","DVN","CE","MRO","BA","VRTX","GILD","EQIX","TER","MDT","V","QRVO","A","FOX","FLT","MO","CTRA","SWKS","ENPH","MCHP","CDNS","MSCI","CHTR","EIX","KDP","BBY","GEN","WBA","LVS","HCA","AJG","DTE","C","T","CF","DISH","MGM","HUM","CBOE","CFG","APH","SYY","MSI","FCX","ADM","OGN","LH","PKI","LNT","BAC","LNC","PSX","GPN","PPG","TECH","IRM","IQV","ESS","WBD","HAL","STZ","DXC","PARA","ADI","F","ADBE","CPRT","TDG","TFX","ULTA","ARE","SYK","CB","TSN","GNRC","PEP","PEG","NOW","LLY","COST","REG","NWS","LOW","MDLZ","BKNG","ZBRA","FMC","XEL","AIZ","MET","FTV","DLR","ACGL","XRAY","FAST","TJX","SNA","MPC","BR","D","MRK","STX","NOC","BXP","KHC","IPG","UNP","ALLE","ABBV","CDAY","ORCL","ECL","ETR","EBAY","SBUX","IR","AMT","INTU","DPZ","PAYC","CMA","PG","CAT","ODFL","MCD","MNST","AMZN","INTC","PNR","GLW","BDX","KMI","CSGP","PWR","APTV","BBWI","DXCM","EXR","WELL","HOLX","EXPD","GM","TXN","VRSK","SJM","TMO","OXY","RL","CCI","MMM","MOS","FTNT","HSY","JNPR","DHI","ED","ES","ADSK","GL","INVH","IP","EXPE","KO","PCAR","WDC","LUMN","PYPL","NEE","UPS","ELV","EMR","MSFT","ANSS","CTAS","BIO","UDR","CTLT","WEC","AME","IT","DD","ACN","VRSN","EW","CMG","AWK","COO","SHW","HPQ","AMAT","CCL","MLM","AVY","AAP","ATVI","EVRG","EA","DE","SPG","AMD","KLAC","NDAQ","URI","WHR","RTX","NXPI","PNC","KMX","SEDG","WRK","MTCH","BIIB","NVDA","CHRW","ROP","IDXX","EXC","HES","HD","ALB","VLO","AON","ZTS","FDX","DG","TYL","HIG","CMS","CAG","INCY","SCHW","HSIC","AZO","AXP","HPE","DFS","SEE","HRL","SO","FRT","ZBH","FRC","CME","XOM","AMP","CVX","CMCSA","PCG","PNW","ICE","BEN","UHS","BKR","EMN","SBAC","ROK","PTC","NRG","NSC","NKE","FIS","FANG","VTR","MAS","RF","ETSY","AMCR","TAP","MAR","XYL","CMI","MTD","KR","PLD","IBM","USB","BSX","LKQ","FBHS","LIN","ITW","EOG","KMB","PEAK","SPGI","NEM","WFC","CTVA","EL","GS","GD","CNP","PM","RE","MCO","CLX","CAH","MPWR","DGX","AVB","DIS","CBRE","GE","HII","LDOS","ALL","ETN","ALGN","NFLX","SBNY","LEN","FITB","WST","GWW","TRGP","NTRS","CVS","AOS","FE","ABC","JPM","ABT","OMC","COF","TSCO","PH","HST","JBHT","MRNA","TSLA","MOH","ATO","COP","DHR","CNC","MCK","TXT","MTB","FDS","VTRS","AKAM","ROL","RMD","WRB","GOOGL","BRO","ANET","PAYX","ALK","DRI","ILMN","META","AAL","MAA","MMC","FOXA","POOL","CZR","FFIV","VNO","CINF","VMC","MKTX","SRE","LHX","ORLY","IVZ","RCL","PXD","SNPS","GOOG","EPAM","SIVB","NDSN","YUM","EQT","LYV","PFE","AVGO","DUK","REGN","CL","VFC","VZ","JCI","AMGN","TEL","JKHY","ADP","ON","STT","RSG","IFF","CARR","TRMB","QCOM","LYB","GIS","PHM","ROST","LUV","LW","MS","CPB","OKE","BK","J","SYF","CHD","HWM","MHK","TFC","DAL","APA","K","AFL","CSX","NI","CPT","PFG","NCLH","ZION","RJF","HBAN","UNH","PRU","GPC","WTW","FISV","WMB","EQR","DVA","AIG","MA","HON","VICI","O","NWSA","TTWO","AES","SLB","TT","TGT","AAPL","MKC","OTIS","CEG","TDY","WY","APD","GRMN","AEE","HLT","DLTR","STE","HAS","TMUS","WMT","NTAP","KIM","BAX","LMT","ABMD","KEY","KEYS","BMY","PSA","WYNN","RHI","EFX","NUE","PKG","WAB","CTSH","SWK","CRL","MU","TRV","L","AEP","CI","DOW","CDW","BALL","JNJ","WM","DOV","CRM","PGR","WAT","IEX","BWA","LRCX","NWL","BLK","PPL"]
         
@@ -95,10 +89,9 @@ class Strategy:
                                                   clearDataLen=10000)
         benchmark_file_path = os.path.abspath(os.getcwd())
         benchmark_file_path = os.path.join(benchmark_file_path,'backtesting')
-        self.benchmark = pd.read_csv(os.path.join(benchmark_file_path,'US10yrsbond.csv'))
+        self.benchmark = pd.read_parquet(os.path.join(benchmark_file_path,'US10yrsbond.parquet'))
 
-
-    def back_testing(self, start_date="2022-10-19", end_date="2022-10-21"):
+    def back_testing(self, start_date="2022-10-19", end_date="2022-11-8"):
         """
         back_testing takes in the start and end time, then proceed to
         test the performance of the strategy
@@ -113,15 +106,24 @@ class Strategy:
         self.end_time = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=16)
         
         algoStartTime = time.time()
-        self.load_prices()
+        nyse = mcal.get_calendar('NYSE')
+        valid_dates = nyse.valid_days(start_date=self.start_date, end_date=self.end_date)
+        self.dates = [d.to_pydatetime().date() for d in valid_dates]
+        import copy
+        self.date_tracker = copy.deepcopy(self.dates)
         print("\n started backtesting")
         
         while self.current_time < self.end_time:
-            print(self.current_time)
             if self.is_trading_hour(self.current_time):            
                 if self.current_time.hour == 9 and self.current_time.minute == 30:
                     self.calculate_assets('open')
-                    self.dates.append(self.current_date)
+                    # load today's file
+                    # if an error arises just go to the next possible day (the file for the current, day doesnt exist)
+                    try:
+                        self.load_prices()
+                    except FileNotFoundError:
+                        self.current_time = self.next_nearest_trading_date(self.current_time)
+                        continue
                 # now self.data holds today's data as a pandas dataframe
 
                 # simulate all the ticks for the current day
@@ -141,8 +143,8 @@ class Strategy:
                 ticker_data_dict = {}
                 if self.tickers == None:
                     self.tickers = self.data["name"].unique()
-                    
-                ticker_data_dict = dict(zip(self.tickers,self.tickdata['open'].to_list()))
+                
+                ticker_data_dict = dict(zip(self.tickers,self.tickdata['open'].astype(float).to_list()))
                 tickOrders = self.algo.update(ticker_data_dict)
                         
                 self.current_time += timedelta(minutes=self.tick_rate)
@@ -151,13 +153,7 @@ class Strategy:
                 self.calculate_assets('close')
                 self.current_time = self.next_nearest_trading_date(self.current_time)
                 self.current_date = self.current_time.date()
-                # load next day's file
-                # if an error arises just go to the next possible day (the file for the current, day doesnt exist)
-                try:
-                    self.load_prices()
-                except FileNotFoundError:
-                    self.current_time = self.next_nearest_trading_date(self.current_time)
-                    continue
+
                 
         self.calculate_assets('close')
         self.calculate_daily_gain_loss()
@@ -166,7 +162,7 @@ class Strategy:
         self.calculate_sharpe_ratio()
 
         runtime = time.time() - algoStartTime
-        print("\n finished backtesting, started visualizing")
+        print("\n finished")
         print("\n Runtime was %s seconds" % runtime)
         self.make_viz()
         file_path = os.getcwd()
@@ -219,103 +215,55 @@ class Strategy:
         # file_path = os.path.abspath(__file__)
         file_path = os.getcwd()
         file_path = os.path.join(file_path,'backtesting')
-        file_path = os.path.join(file_path, directory)
+        file_path = os.path.join(file_path,'performance')
 
         # try making directory
         try:
             os.makedirs(file_path)
         except OSError as error:
-            print("directory already exists", error)
+            pass
 
         # Make Transaction Log
         self.make_log(file_path)
-
-        # Make graphs
-        if plot_total_assets:
-            # plot self.total_daily_assets vs self.dates with create_plot()
-            self.make_plot(
-                x_data=self.dates,
-                y_data=self.total_daily_assets_open,
-                file_path=file_path,
-                xlabel="Dates",
-                ylabel="Total Daily Assets (USD)",
-                title=f'{self.current_date.strftime("%Y-%m-%d")}_total_daily_assets',
-            )
-        if plot_daily_returns:
-            # plot self.daily_gain_loss vs self.dates with create_plot()
-            self.make_plot(
-                x_data=self.dates,
-                y_data=self.daily_gain_loss,
-                file_path=file_path,
-                xlabel="Dates",
-                ylabel="Percentage Change Assets",
-                title=f'{self.name}_{self.start_date}_{self.end_date}_daily_return',
-                plot_together=self.benchmark,
-            )
-
-        if plot_monthly_returns:
-            # plot self.daily_gain_loss vs self.dates with create_plot()
-            self.make_plot(
-                x_data=self.monthly_gain_loss["dates"],
-                y_data=self.monthly_gain_loss["gain_loss"],
-                file_path=file_path,
-                xlabel="Dates",
-                ylabel="Percentage Change Assets",
-                title=f'{self.current_date.strftime("%Y-%m-%d")}_monthly_gain_loss',
-            )
-            
-        # print(self.benchmark)
-        # self.make_plot(x_data=self.dates, y_data=self.benchmark, file_path=file_path,
-        #                     xlabel='Dates', ylabel='10 yr bond price',
-        #                     title=f'{self.current_date.strftime("%Y-%m-%d")} 10 yr bond')
-        return
+        
+        file_path = os.path.join(file_path,'figures')
+        fig, ax = plt.subplots(nrows=2,ncols=1)
+        data = [self.daily_gain_loss, self.total_daily_assets_close]
+        names = [f'daily gain loss', f'total daily assets']
+        for i in range(2):
+            ax[i].plot(self.dates, data[i],label=self.name)
+            ax[i].set(title=names[i])
+            if i == 0: # plot benchmark
+                ax[i].plot(self.dates, self.benchmark['percent_change'],label='US10yrsbond')
+                ax[i].legend(loc="upper right")
+        fig.set_size_inches(9, 9)
+        plt.savefig(file_path)
+        plt.show()
 
     def make_log(self, file_path):
         """
         Creates a text file containing a log of the transactions of portfolio
         """
         transactions = self.portfolio.get_transactions()
-        with open(file_path + "/transactions_log.txt", "w+") as f:
+        file_path_log = os.path.join(file_path,"transactions_log.txt")
+        with open(file_path_log, "w+") as f:
             for i in range(len(transactions)):
                 line = transactions[i]
                 f.write(line[0], line[1], line[2], line[3])
                 f.write("\n")
-
-        with open(file_path + "/statistics.txt", "w+") as f:
+        file_path_stats = os.path.join(file_path,"statistics.txt")
+        with open(file_path_stats, "w+") as f:
             f.write(
                 f"The winrate of your strategy over the time interval of ({self.start_date},{self.end_date}) is {self.win_rate}\n"
             )
             f.write(f"The sharpe ratio is {self.sharpe_ratio}\n")
         return
 
-    def make_plot(
-        self, x_data, y_data, title, xlabel, ylabel, file_path, plot_together=False
-    ):
-        """
-        Creates PNGs of plots given the data and axis.
-        """
-        # print(x_data)
-        # print(y_data)
-        # date_time = self.dates
-        # date_time = pd.to_datetime(date_time)
-
-        plt.plot(x_data, y_data)
-
-        plt.xlabel(xlabel,labelpad=7)
-        plt.ylabel(ylabel,labelpad=7)
-        plt.title(title)
-
-        plot_name = f"{file_path}/{title}_plot.png"
-                
-        plt.savefig(plot_name)
-        plt.clf()
-        return
-
     def load_prices(self):
         path = os.getcwd()
         path = os.path.join(path,'backtesting')
         path = os.path.join(path,'filtered')
-        path = os.path.join(path,f'{self.current_date}.parquet')
+        path = os.path.join(path,f'{self.current_time.date().strftime("%Y-%m-%d")}.parquet')
         self.data = pd.read_parquet(path)
 
     def get_total_assets(self):
@@ -459,12 +407,11 @@ class Strategy:
         # Benchmark/RiskReturns S&P
         if len(self.daily_gain_loss) == 0:
             raise ValueError("Empty data for daily gain/loss")
-
-        # update benchmark every virtual day
-        mask1 = (self.benchmark['Date'] >= self.start_date)
-        mask2 = (self.benchmark['Date'] <= self.end_date)
-        mask = mask1 & mask2
-        self.benchmark = self.benchmark[mask]
+        
+        str_dates = [d.strftime("%Y-%m-%d") for d in self.dates]
+        self.benchmark['percent_change'] = self.benchmark['Close'].pct_change(axis='rows')
+        self.benchmark = self.benchmark.set_index('Date')
+        self.benchmark = self.benchmark[self.benchmark.index.isin(str_dates)]
         assert len(self.daily_gain_loss) == len(
             self.benchmark
         ), "Number of benchmark values does not match number of values in daily gain/loss."
@@ -483,20 +430,20 @@ class Strategy:
         self.sharpe_ratio = expected_differential / std
         return True
 
-    def is_trading_hour(self, date):
+    def is_trading_hour(self, d):
         """
         Verify if the given date is a trading day, return boolean
         Should only be called by back_testing()
 
         date: datetime object
         """
-        if (date.hour > 9 and date.hour < 16 or (date.hour == 9\
-            and date.minute >= 30)) and not date in self.nyse_holidays:
+        if (d.hour > 9 and d.hour < 16 or (d.hour == 9\
+            and d.minute >= 30)) and d.date() in self.dates:
                 return True
         else: return False
 
-    def is_trading_date(self, date):
-        return not date.date() in self.nyse_holidays
+    def is_trading_date(self, d):
+        return d.date() in self.dates
             
     def next_nearest_trading_date(self, d):
         """
@@ -505,13 +452,10 @@ class Strategy:
 
         date: datetime object
         """
-        print(d)
-        d += timedelta(days=1)  # move onto next date
-        d = d.replace(hour=9, minute=30)
-        while not self.is_trading_date(d):  # check if current date is trading date
-            d += timedelta(days=1)  # move onto next date
-            d = d.replace(hour=9, minute=30)
-        return d
+        self.date_tracker.pop(0)  
+        d = self.date_tracker[0]  
+        print(f"{len(self.date_tracker)} day(s) left to be computed")
+        return datetime(d.year, d.month, d.day, 9, 30)
 
     def handle_run_daily(self):
         """
@@ -520,84 +464,6 @@ class Strategy:
         self.on_market_open()
         self.run_daily()
         self.on_market_close()
-
-    def place_order(self, stock_name, shares):
-        """
-        handler for buy/sell, set shares > 0 for buy and < 0 for sell
-        this function should be called by users in the followed functions only
-
-        stock_name: string
-        shares: float
-        """
-        stock_price = self.data["date" == self.current_date & "Name" == stock_name]
-        if self.current_date:
-            stock_price = stock_price["open"]
-        else:
-            stock_price = stock_price["close"]
-        self.portfolio.place_order(stock_name, stock_price, shares)
-
-    ################################################################################
-    # below are methods that the designer of strategy should override
-    # developlers shouldn't modified anything below this line
-    ################################################################################
-    ################################################################################
-
-    def on_market_close(self):
-        """
-        This method should be overided by the designer of strategy on an instance level
-        with python's type package
-        Should be executed before market close everyday
-        """
-        # should be used for placing at-the-close orders and stock selection
-        pass
-
-    def on_market_open(self):
-        """
-        This method should be overided by the designer of strategy on an instance level
-        with python's type package
-        Should be executed before market open every virtual day
-        """
-        # should be used for placing at-the-close orders and stock selection
-        pass
-
-    def run_tickly(self):
-        """
-        This method is overided by the designer. Executed on each tick. By default each minute.
-        """
-        pass
-
-    def run_hourly(self):
-        """
-        Overrided by the designer, executes at the first instance where the hour changes from one hour to the next (i.e., 9AM to 10AM)
-        """
-        pass
-
-    def run_daily(self):
-        """
-        This method should be overided by the designer of strategy on an instance level
-        with python's type package
-        Should be executed before market open every virtual day
-        """
-        pass
-
-    def run_weekly(self):
-        """
-        This method should be overided by the designer of strategy on an instance level
-        with python's type package
-        Should be executed before market open every virtual week on the day specified (or Mon as default)
-        If date specified is not a trading date, then find the next nearest trading date
-        """
-        pass
-
-    def run_monthly(self):
-        """
-        This method should be overided by the designer of strategy on an instance level
-        with python's type package
-        Should be executed before market open every virtual month on the day specified (or 1st as default)
-        If date specified is not a trading date, then find the next nearest trading date
-        """
-        pass
-
 
 import BollingerBandsMultiStock
 
