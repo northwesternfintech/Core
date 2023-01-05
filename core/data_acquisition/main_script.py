@@ -3,12 +3,14 @@ import multiprocessing
 import multiprocessing as mp
 import pandas as pd
 import asyncio
+
 # import schedule
 # import datetime
 # import os
 import ccxt
 from ccxtpro_websocket.ccxttest import ccxtws
 import time
+
 
 async def main(exchanges, coins):  # TODO: Don't think this needs to be async
     with cf.ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
@@ -37,17 +39,25 @@ async def main(exchanges, coins):  # TODO: Don't think this needs to be async
             # layer to avoid unnecessarily initializing websockets
             # ws = ccxtws('ccxt.' + exchanges[0] + '()', q, r, coins)
             ws = ccxtws(ccxt.kraken(), q, r, coins)
-            executor.submit(ws.run)
+            future = executor.submit(ws.run)
+            while True:
+                print(future)
+                print(future.result())
+                time.sleep(1)
+
         except Exception:
+            print(Exception.with_traceback())
             print("Need to use API")
+
 
 # Test if it works!
 def activate(exchanges, coins):
-    if __name__ == '__main__':
+    if __name__ == "__main__":
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         asyncio.get_event_loop().run_until_complete(main(exchanges, coins))
 
-exchanges = ['kraken', 'binance', 'kucoin', 'gemini', 'coinbase']
-coins = ['BTH-USDT']
+
+exchanges = ["kraken", "binance", "kucoin", "gemini", "coinbase"]
+coins = ["BTH-USDT"]
 activate(exchanges, coins)
