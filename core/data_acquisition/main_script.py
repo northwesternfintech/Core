@@ -53,8 +53,6 @@ async def main(exchanges, coins):  # TODO: Don't think this needs to be async
 # Test if it works!
 def activate(exchanges, coins):
     if __name__ == "__main__":
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         asyncio.get_event_loop().run_until_complete(main(exchanges, coins))
 
 
