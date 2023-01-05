@@ -10,6 +10,9 @@ import traceback
 import ccxt
 from ccxtpro_websocket.ccxttest import ccxtws
 import time
+import nest_asyncio
+
+nest_asyncio.apply()
 
 
 async def main(exchanges, coins):  # TODO: Don't think this needs to be async
