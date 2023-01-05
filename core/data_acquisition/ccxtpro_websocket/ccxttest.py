@@ -34,14 +34,15 @@ class ccxtws(WebSocket):
                     currDateTime = datetime.fromtimestamp(m1Data[coin]['timestamp']/1000)
                     if msgData != {} and currDateTime != []:
                         tempDataFrame = pd.DataFrame(data = msgData, index = [currDateTime])
-                        path = "/Users/dpark/Downloads/"
-                        filename = "RAW_CSV_OUTPUT_" + str(time.time()) + ".csv"
+                        # path = "/Users/dpark/Downloads/"
+                        # filename = "RAW_CSV_OUTPUT_" + str(time.time()) + ".csv"
                         self.maindf = pd.concat([self.maindf, tempDataFrame])
-                        # self.queue_1.put(df)
-                        self.shittyCounter += 1
-                        if self.shittyCounter > 10:
-                            self.maindf.to_csv(path + filename)
-                            self.shittyCounter = 0
+                        print(self.maindf)
+                        self.queue_1.put(self.maindf)
+                        # self.shittyCounter += 1
+                        # if self.shittyCounter > 10:
+                        #     self.maindf.to_csv(path + filename)
+                        #     self.shittyCounter = 0
                             
         except Exception:
             print(traceback.format_exc())
@@ -49,8 +50,8 @@ class ccxtws(WebSocket):
 
 
 
-q = multiprocessing.Queue()
-r = multiprocessing.Queue()
-ws = ccxtws(ccxt.kraken(), q, r, coins = ['ETH/USDT', 'BTC/USDT'])
-ws.run()
+# q = multiprocessing.Queue()
+# r = multiprocessing.Queue()
+# ws = ccxtws(ccxt.kraken(), q, r, coins = ['ETH/USDT', 'BTC/USDT'])
+# ws.run()
     
