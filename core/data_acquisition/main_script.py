@@ -3,7 +3,7 @@ import multiprocessing
 import multiprocessing as mp
 import pandas as pd
 import asyncio
-
+import traceback
 # import schedule
 # import datetime
 # import os
@@ -16,9 +16,9 @@ async def main(exchanges, coins):  # TODO: Don't think this needs to be async
     with cf.ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
 
         # Initializing the multiprocessing queues for the websockets to use
-
-        q = multiprocessing.Queue()
-        r = multiprocessing.Queue()
+        manager = multiprocessing.Manager()
+        q = manager.Queue()
+        r = manager.Queue()
 
         # async def queue_to_csv():
         #     # TODO: Replace the empty path string to the directory for desired output file
@@ -38,15 +38,15 @@ async def main(exchanges, coins):  # TODO: Don't think this needs to be async
             # Initializing web sockets as the program traverses through the try except
             # layer to avoid unnecessarily initializing websockets
             # ws = ccxtws('ccxt.' + exchanges[0] + '()', q, r, coins)
-            ws = ccxtws(ccxt.kraken(), q, r, coins)
-            future = executor.submit(ws.run)
+            ws = ccxtws("fuck", q, r, coins=["ETH/USDT", "BTC/USDT"])
+            future = executor.submit(ws.activate)
             while True:
                 print(future)
                 print(future.result())
                 time.sleep(1)
 
         except Exception:
-            print(Exception.with_traceback())
+            traceback.print_exc()
             print("Need to use API")
 
 
@@ -59,5 +59,6 @@ def activate(exchanges, coins):
 
 
 exchanges = ["kraken", "binance", "kucoin", "gemini", "coinbase"]
-coins = ["BTH-USDT"]
+coins = ["BTC/USDT"]
+#print(ccxt.kraken().fetchTickers(symbols=coins))
 activate(exchanges, coins)

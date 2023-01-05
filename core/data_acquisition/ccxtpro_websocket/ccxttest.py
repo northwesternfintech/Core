@@ -8,20 +8,25 @@ from datetime import datetime
 import time
 
 
-class ccxtws(WebSocket):
+class ccxtws():
+
     def __init__(self, exchange, queue_1, queue_2, coins):
-        super().__init__(exchange, queue_1, queue_2, coins)
+        self.exchange = ccxt.kraken()
+        self.queue_1 = queue_1
+        self.queue_2 = queue_2
+        self.coins = coins
         self.shittyCounter = 0
         self.maindf = pd.DataFrame()
 
     async def async_run(self):
-        if self.exchange.has["fetchTickers"]:
+        if True:
             pass
         else:
             print("No fetchTickers!")
             return
         try:
             while True:
+                print(self.exchange)
                 m1Data = self.exchange.fetchTickers(symbols=self.coins)
                 msgData = {}
                 currDateTime = []
@@ -49,9 +54,12 @@ class ccxtws(WebSocket):
 
         except Exception:
             print(traceback.format_exc())
+    def activate(self):
+        asyncio.get_event_loop().run_until_complete(self.async_run())
 
 
-# q = multiprocessing.Queue()
-# r = multiprocessing.Queue()
-# ws = ccxtws(ccxt.kraken(), q, r, coins=["ETH/USDT", "BTC/USDT"])
-# ws.run()
+if __name__ == "__main__":
+    q = multiprocessing.Queue()
+    r = multiprocessing.Queue()
+    ws = ccxtws('kraken', q, r, coins=["ETH/USDT", "BTC/USDT"])
+    ws.activate()
