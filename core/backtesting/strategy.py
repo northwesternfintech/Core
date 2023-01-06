@@ -1,10 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
-import shutil
-# import pyarrow as pa
-# import pyarrow.parquet as pq
-
 import pandas_market_calendars as mcal
 from datetime import datetime, timedelta
 import portfolio
@@ -22,7 +18,6 @@ class Strategy:
         transaction_cost=None,
         start_balance=None,
         tick_freq=1,
-        data_file_folder="filtered",
         tickers=None,
         name='algo',
         exchange='NYSE'
@@ -52,9 +47,6 @@ class Strategy:
         self.name=name
         
         self.cal = mcal.get_calendar(exchange)
-        self._data_file_folder = data_file_folder
-        ##self.data = pd.read_csv(self._data_file_folder) csv reading is outdated
-        ###
         ### Parameters for storing statistical data for strategy
         ###
         self.data = None  # the data for the current day
@@ -87,6 +79,7 @@ class Strategy:
                                                   bandSD=2,
                                                   dayConst=390,
                                                   clearDataLen=10000)
+        
         benchmark_file_path = os.path.abspath(os.getcwd())
         benchmark_file_path = os.path.join(benchmark_file_path,'backtesting')
         self.benchmark = pd.read_parquet(os.path.join(benchmark_file_path,'US10yrsbond.parquet'))
@@ -109,9 +102,8 @@ class Strategy:
         nyse = mcal.get_calendar('NYSE')
         valid_dates = nyse.valid_days(start_date=self.start_date, end_date=self.end_date)
         self.dates = [d.to_pydatetime().date() for d in valid_dates]
-        import copy
-        self.date_tracker = copy.deepcopy(self.dates)
-        print("\n started backtesting")
+        import copy; self.date_tracker = copy.deepcopy(self.dates)
+        print("\n Started")
         
         while self.current_time < self.end_time:
             if self.is_trading_hour(self.current_time):            
@@ -162,7 +154,7 @@ class Strategy:
         self.calculate_sharpe_ratio()
 
         runtime = time.time() - algoStartTime
-        print("\n finished")
+        print("\n Finished")
         print("\n Runtime was %s seconds" % runtime)
         self.make_viz()
         file_path = os.getcwd()
@@ -179,25 +171,6 @@ class Strategy:
         time: the time that the action took place
         """
         self.log.append([msg, time])
-
-    def fetch_viz(
-        self, plot_total_assets=True, plot_daily_returns=True, plot_win_rate=True
-    ):
-        """
-        This function should be executed after backtesting for visualizing the
-        performance of the strategy
-        Use matplotlibe/seaborn/etc. to make graphs, then display the logs by the
-        side, gotta make this look fancy
-        Fetches the graphs and logs from the saved directory
-
-        Boolean parameters gives user control over which variables to display
-
-        plot_total_assets: a boolean that indicates whether total_assets should be displayed
-        plot_daily_returns: a boolean that indicates whether daily_returns should be displayed
-        plot_win_rate: a boolean that indicates whether win_rate should be displayed
-        """
-
-        pass
 
     def make_viz(
         self,
@@ -265,18 +238,6 @@ class Strategy:
         path = os.path.join(path,'filtered')
         path = os.path.join(path,f'{self.current_time.date().strftime("%Y-%m-%d")}.parquet')
         self.data = pd.read_parquet(path)
-
-    def get_total_assets(self):
-        return [self.total_daily_assets_open, self.total_daily_assets_close]
-
-    def get_daily_gain_loss(self):
-        return self.daily_gain_loss
-
-    def get_monthly_gain_loss(self):
-        return self.monthly_gain_loss
-
-    def get_win_rate(self):
-        return [self.win_rate, self.winning_action, self.total_action]
 
     def calculate_assets(self, mode): # mode can be open or close
         total_holdings = 0
@@ -454,24 +415,15 @@ class Strategy:
         """
         self.date_tracker.pop(0)  
         d = self.date_tracker[0]  
-        print(f"{len(self.date_tracker)} day(s) left to be computed")
+        print(f"{len(self.dates)-len(self.date_tracker)}/{len(self.dates)}")
         return datetime(d.year, d.month, d.day, 9, 30)
-
-    def handle_run_daily(self):
-        """
-        handler for run_daily, to be called in back_testing()
-        """
-        self.on_market_open()
-        self.run_daily()
-        self.on_market_close()
 
 import BollingerBandsMultiStock
 
 s = Strategy(
     algo=BollingerBandsMultiStock,
-    transaction_cost=0.05,
+    transaction_cost=0.01,
     start_balance=10000,
-    data_file_folder="filtered",
     name='BollingerBandsMultiStock'
 )
 
