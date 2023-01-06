@@ -1,4 +1,4 @@
-import ccxt
+import ccxt.async_support
 from web_socket import WebSocket
 import pandas as pd
 import traceback
@@ -11,7 +11,7 @@ import time
 class ccxtws():
 
     def __init__(self, exchange, queue_1, queue_2, coins):
-        self.exchange = ccxt.kraken()
+        # self.exchange = ccxt.async_support.kraken()
         self.queue_1 = queue_1
         self.queue_2 = queue_2
         self.coins = coins
@@ -25,8 +25,9 @@ class ccxtws():
             print("No fetchTickers!")
             return
         try:
+            self.exchange = ccxt.async_support.coinbase()
             while True:
-                m1Data = self.exchange.fetchTickers(symbols=self.coins)
+                m1Data = await self.exchange.fetch_tickers(symbols=self.coins)
                 msgData = {}
                 currDateTime = []
                 for coin in self.coins:
@@ -60,5 +61,5 @@ class ccxtws():
 if __name__ == "__main__":
     q = multiprocessing.Queue()
     r = multiprocessing.Queue()
-    ws = ccxtws('kraken', q, r, coins=["ETH/USDT", "BTC/USDT"])
-    ws.activate()
+    # ws = ccxtws('kraken', q, r, coins=["ETH/USDT", "BTC/USDT"])
+    # ws.activate()
