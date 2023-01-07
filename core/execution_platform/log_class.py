@@ -29,7 +29,7 @@ class LoggingClass:
         """
         try:
             errorFilePath = self.generateLogFilePath(True)
-            logging.basicConfig(filename=errorFilePath, filemode='w+', format='%(asctime)s - %(message)s', level=logging.ERROR)
+            logging.basicConfig(filename=errorFilePath, filemode='w+', format='%(message)', level=logging.ERROR)
             logging.error(message)
             return 0
         except Exception as e:
