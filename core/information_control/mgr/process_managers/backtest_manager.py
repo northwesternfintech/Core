@@ -2,6 +2,7 @@ import os
 import signal
 import subprocess
 from typing import Dict, List, Set, Tuple, Union
+import asyncio
 
 from ..workers.status import WorkerStatus
 from .process_manager import ProcessManager
@@ -24,7 +25,7 @@ class BacktestManager(ProcessManager):
         """
         super().__init__(manager)
 
-    def start(self, mode='historical',
+    async def start(self, mode='historical',
               block=False, **kwargs) -> int:
         """Starts a worker to backtest an algorithm.
 
@@ -65,8 +66,7 @@ class BacktestManager(ProcessManager):
             cmd.append(f"--{kwarg_name} {kwarg_val} ")
 
         logger.error(''.join(cmd).split())
-        process = subprocess.Popen(''.join(cmd).split(), shell=False,
-                                   start_new_session=True)
+        process = await asyncio.create_subprocess_exec(''.join(cmd).split())
         pid = process.pid
 
         # Update status

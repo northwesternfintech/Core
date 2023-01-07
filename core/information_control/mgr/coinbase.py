@@ -80,6 +80,7 @@ class CoinbaseWebSocket(WebSocket):
                             # self.channel.basic_publish(exchange='coinbase', routing_key='', 
                             # body=df.to_string())
                             # print(df)
+                            print(msg_data)
                             await self.queue_1.put(msg_data) 
                     # If market 2 data
                     elif temp_json['type'] == 'l2update':
@@ -100,6 +101,7 @@ class CoinbaseWebSocket(WebSocket):
                             # self.channel.basic_publish(exchange='coinbase', routing_key='', 
                             # body=df.to_string())
                             # print(df)
+                            print(msg_data)
                             await self.queue_2.put(msg_data) 
         except Exception as e:
             print(traceback.format_exc())

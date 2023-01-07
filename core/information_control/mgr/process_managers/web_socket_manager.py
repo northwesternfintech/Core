@@ -5,6 +5,7 @@ from typing import Dict, List, Set, Tuple, Union
 import logging
 import psutil
 import time
+import asyncio
 
 from ..workers.status import WorkerStatus
 from .process_manager import ProcessManager
@@ -37,7 +38,7 @@ class WebSocketManager(ProcessManager):
         self._running_tickers: Set[str] = set()
         self._pid_tickers: Dict[int, Set[str]] = {}
 
-    def start(self, tickers: List[str]) -> int:
+    async def start(self, tickers: List[str]) -> int:
         """Takes a list of ticker names and starts a websocket to retrieve
         ticker information in a separate processs. Currently there will only
         be a single thread running in each process.
@@ -82,8 +83,7 @@ class WebSocketManager(ProcessManager):
             f"--tickers {' '.join(tickers)} "
         )
 
-        process = subprocess.Popen(cmd.split(), shell=False,
-                                   start_new_session=True)
+        process = await asyncio.create_subprocess_exec(cmd.split())
         pid = process.pid
 
         # Update status
@@ -92,7 +92,8 @@ class WebSocketManager(ProcessManager):
         self._running_tickers.update(tickers_set)
         self._pid_tickers[pid] = tickers_set
 
-        return pid
+        print(pid)
+        await process.wait()
 
     def stop(self, pid: int) -> None:
         """Takes a PID of a web socket process and terminates it.

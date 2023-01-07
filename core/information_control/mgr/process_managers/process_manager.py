@@ -39,7 +39,7 @@ class ProcessManager(ABC):
         self._pid_status: Dict[int, WorkerStatus] = {}
         self._pid_process: Dict[int, subprocess.Popen] = {}
 
-    def start(self) -> int:
+    async def start(self) -> int:
         """Starts a worker to backtest an algorithm. Work
         in progress
 
