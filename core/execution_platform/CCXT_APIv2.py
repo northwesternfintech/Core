@@ -54,7 +54,7 @@ class executionPlatform:
         Errors  : Raise Exception if exchangeName is not in ccxt.exchanges; Raise Exception if authentication fails
         '''
         if exchangeName not in ccxt.exchanges:
-            self.log.errorLog("No exchange named " + exchangeName + " exists in CCXT | t=" + str(datetime.now()))
+            self.log.errorLog("No exchange named " + exchangeName + " exists in CCXT")
             raise Exception("No exchange named " + exchangeName + " exists in CCXT")
 
         exc = 'ccxt.' + exchangeName + '()'
@@ -66,10 +66,10 @@ class executionPlatform:
         try: 
             self.mapToExchange[exchangeName].fetchBalance()
         except ccxt.AuthenticationError:
-            self.log.errorLog("Authentication Error for: " + exchangeName + " | t=" + str(datetime.now()))
+            self.log.errorLog("Authentication Error for: " + exchangeName)
             raise ("Authentication Error for: " + exchangeName)
         except:
-            self.log.errorLog("Unknown Error for: " + exchangeName + " | t=" + str(datetime.now()))
+            self.log.errorLog("Unknown Error for: " + exchangeName)
             raise ("Unknown Error for: " + exchangeName)
         else:
             return 0
@@ -81,12 +81,12 @@ class executionPlatform:
         Errors  : Log error if exchange is not in mapToExchange, Log error if ccxt error occurs
         '''
         if exchange not in self.mapToExchange:
-            self.log.errorLog(f"Exchange {exchange} not declared for getBalance() at t = {datetime.now()}")
+            self.log.errorLog(f"Exchange {exchange} not declared for getBalance()")
         else:
             try:
                 return self.mapToExchange[exchange].fetchBalance()
             except Exception as e:
-                self.log.errorLog(f"Exception for getBalance({exchange}) at t = {datetime.now()}, {e}")
+                self.log.errorLog(f"Exception for getBalance({exchange}), {e}")
 
     def inspectOrder(self, exchange: str, internalID: int):
         """
@@ -95,14 +95,14 @@ class executionPlatform:
         Errors  : Log error if exchange is not in mapToExchange, Log error if unknown error occurs
         """
         if exchange not in self.mapToExchange:
-            self.log.errorLog(f"Exchange {exchange} not declared for inspectOrder() at t = {datetime.now()}")
+            self.log.errorLog(f"Exchange {exchange} not declared for inspectOrder()")
             return 2
         else:
             try:
                 orderID = self.idDict[internalID]
                 return self.mapToExchange[exchange].fetchOrder(orderID)
             except Exception as e:
-                self.log.errorLog(f"Exception for inspectOrder({internalID}) at t = {datetime.now()}, {e}")
+                self.log.errorLog(f"Exception for inspectOrder({internalID}), {e}")
                 return 2
     
     def cancelOrder(self, exchange: str, internalID: int):
@@ -112,7 +112,7 @@ class executionPlatform:
         Errors  : Log error if exchange is not in mapToExchange, Log error if unknown error occurs
         '''
         if exchange not in self.mapToExchange:
-            self.log.errorLog(f"Exchange {exchange} not declared for cancelOrder() at t = {datetime.now()}")
+            self.log.errorLog(f"Exchange {exchange} not declared for cancelOrder()")
             return 2
         else:
             try:
@@ -121,7 +121,7 @@ class executionPlatform:
             except:
                 return 1 #TODO: add error handling; should return 1 if recoverable error (network), return 2 if unrecoverable error
             
-            self.log.orderLog(f"[CANCELLED ORDER id = {internalID}]" + str(orderBook))
+            self.log.orderLog(orderBook, f"[CANCELLED ORDER id = {internalID}]")
             return 0
 
     def changeOrder(self, internalID:int, exchange: str, symbol:str, side: str, type: str, amount: float, price: float=None):
@@ -143,7 +143,7 @@ class executionPlatform:
             orderID = self.idDict[internalID]
             if type == 'limit':
                 if not price:
-                    self.log.errorLog(f"[CHANGE ORDER id = {internalID}] Limit order placed without price at t = {datetime.now()}, exchange = {exchange}, symbol = {symbol}, side = {side}, type = {type}, amount = {amount}")
+                    self.log.errorLog(f"[CHANGE ORDER id = {internalID}] Limit order placed without price | exchange = {exchange}, symbol = {symbol}, side = {side}, type = {type}, amount = {amount}")
                     return 2
                 else:
                     try:
@@ -156,7 +156,7 @@ class executionPlatform:
                 except:
                     return 1 #TODO: add error handling; should return 1 if recoverable error (network), return 2 if unrecoverable error
                 
-            self.log.orderLog(f"[CHANGE ORDER id = {internalID}]" + str(orderBook))
+            self.log.orderLog(orderBook, f"[CHANGE ORDER id = {internalID}]")
             return 0  
 
     def placeOrder(self, internalID: int, exchange: str, symbol: str, side: str, type: str, amount: float, price: float=None):
@@ -172,12 +172,12 @@ class executionPlatform:
         Errors  : Log error if exchange is not in mapToExchange, Log error if unknown error occurs
         '''
         if exchange not in self.mapToExchange:
-            self.log.errorLog(f"Exchange {exchange} not declared for placeOrder() at t = {datetime.now()}")
+            self.log.errorLog(f"Exchange {exchange} not declared for placeOrder()")
             return 2
         else:
             if type == 'limit':
                 if not price:
-                    self.log.errorLog(f"Limit order {internalID} placed without price at t = {datetime.now()}, exchange = {exchange}, symbol = {symbol}, side = {side}, type = {type}, amount = {amount}")
+                    self.log.errorLog(f"Limit order {internalID} placed without price | exchange = {exchange}, symbol = {symbol}, side = {side}, type = {type}, amount = {amount}")
                     return 2
                 else:
                     try:
@@ -191,7 +191,7 @@ class executionPlatform:
                     return 1 #TODO: add error handling; should return 1 if recoverable error (network), return 2 if unrecoverable error 
                 
             self.idDict[internalID] = orderBook['id']
-            self.log.orderLog(f"[PLACED ORDER id = {self.idDict[internalID]}]" + str(orderBook))
+            self.log.orderLog(orderBook, f"[PLACED ORDER id = {self.idDict[internalID]}]")
             return 0  
     
     def retryOrders(self):
@@ -204,7 +204,7 @@ class executionPlatform:
             while self.retryQueue.qsize() > 0:
                 order = self.retryQueue.pop(0)
                 if order['timePlaced'] + order['retryTime'] < datetime.now():
-                    self.log.orderLog(f"Order {order['internalID']} has not been placed and has expired at t = {datetime.now()}")
+                    self.log.errorLog(f"Order {order['internalID']} has not been placed and has expired")
                 else:
                     if order['category'] == 'place':
                         res = self.placeOrder(order['internalID'], order['exchange'], order['symbol'], order['side'], order['type'], order['amount'], order['price']) if order['type'] == 'limit' else self.placeOrder(order['exchange'], order['symbol'], order['side'], order['type'], order['amount'])
@@ -216,7 +216,7 @@ class executionPlatform:
                     if res == 1:
                         self.retryQueue.append(order)
         except Exception as e:
-            self.log.errorLog(f"Exception for retryOrders() at t = {datetime.now()}, {e}")
+            self.log.errorLog(f"Exception for retryOrders(), {e}")
             raise RuntimeError
 
     def run(self):
@@ -229,7 +229,7 @@ class executionPlatform:
             while self.orderQueue.qsize() > 0:
                 order = self.orderQueue.pop(0)
                 if order['timePlaced'] + order['retryTime'] < datetime.now():
-                    self.log.orderLog(f"Order {order['internalID']} has not been placed and has expired at t = {datetime.now()}")
+                    self.log.errorLog(f"Order {order['internalID']} has not been placed and has expired")
                 else:
                     if order['category'] == 'place':
                         res = self.placeOrder(order['internalID'], order['exchange'], order['symbol'], order['side'], order['type'], order['amount'], order['price']) if order['type'] == 'limit' else self.placeOrder(order['exchange'], order['symbol'], order['side'], order['type'], order['amount'])
@@ -241,7 +241,7 @@ class executionPlatform:
                     if res == 1:
                         self.retryQueue.append(order)
         except Exception as e:
-            self.log.errorLog(f"Exception for run() at t = {datetime.now()}, {e}")
+            self.log.errorLog(f"Exception for run(), {e}")
             raise RuntimeError
 
     '''
