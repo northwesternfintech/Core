@@ -25,7 +25,7 @@ class ccxtws():
             print("No fetchTickers!")
             return
         try:
-            self.exchange = ccxt.async_support.coinbase()
+            self.exchange = ccxt.async_support.kraken()
             while True:
                 m1Data = await self.exchange.fetch_tickers(symbols=self.coins)
                 msgData = {}

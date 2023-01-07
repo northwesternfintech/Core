@@ -41,7 +41,7 @@ async def main(exchanges, coins):  # TODO: Don't think this needs to be async
             # Initializing web sockets as the program traverses through the try except
             # layer to avoid unnecessarily initializing websockets
             # ws = ccxtws('ccxt.' + exchanges[0] + '()', q, r, coins)
-            ws = ccxtws("fuck", q, r, coins=["ETH/USDT", "BTC/USDT"])
+            ws = ccxtws("fuck", q, r, coins=["ETH/USD", "BTC/USD"])
             future = executor.submit(ws.activate)
             while True:
                 print(future)
@@ -60,7 +60,7 @@ def activate(exchanges, coins):
 
 
 exchanges = ["kraken", "binance", "kucoin", "gemini", "coinbase"]
-coins = ["BTC/USDT", "ETH/USDT"]
+coins = ["BTC/USD", "ETH/USD"]
 # print(ccxt.kraken().fetchTickers())
 # (ccxt.kraken().fetchTickers(symbols=coins))
 activate(exchanges, coins)
