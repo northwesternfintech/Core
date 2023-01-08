@@ -43,7 +43,7 @@ class Manager:
         self._address = address
 
         self._max_cores = multiprocessing.cpu_count()
-        self._cur_worker_count = 0
+        self._cur_process_count = 0
 
         self._executor = ProcessPoolExecutor(self._max_cores)
         self._mp_manager = multiprocessing.Manager()
@@ -75,7 +75,8 @@ class Manager:
 
 def main():
     m = Manager()
-    m.web_sockets.start(["ETH/USDT", "BTC/USDT"])
-    print("DONE")
-    return
+    u = m.web_sockets.start(["ETH/USDT", "BTC/USDT"])
+    print("HERE")
+    m.web_sockets.stop(u)
+    print(m.web_sockets.status_all())
     

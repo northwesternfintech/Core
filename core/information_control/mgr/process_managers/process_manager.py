@@ -3,6 +3,8 @@ import signal
 import subprocess
 from typing import Dict, List, Set, Tuple, Union
 import logging
+import multiprocessing
+import concurrent.futures
 
 from ..workers.status import WorkerStatus
 from abc import ABC
@@ -15,12 +17,14 @@ class ProcessManager(ABC):
 
     self._manager : Manager
         Instance of main Manager
-    self._running_pids : Set[str]
-        Set of PIDs of running processes
-    self._pid_status : Dict[str, WebSocketStatus]
-        Map of PIDs to process status
-    self._pid_process : Dict[int, subprocess.Popen]
-        Map of PIDs to processes
+    self._running_uuids : Set[str]
+        Set of uuids of running processes
+    self._uuid_status : Dict[str, WebSocketStatus]
+        Map of uuids to process status
+    self._uuid_process : Dict[str, multiprocessing.Event]
+        Map of uuids to events used to cancel processes
+    self._uuid_future : Dict[str, concurrent.futures.Future]
+        Map of uuids to futures of running process
     """
     def __init__(self,
                  manager: 'Manager'):
@@ -34,147 +38,143 @@ class ProcessManager(ABC):
         """
         self._manager = manager
 
-        self._running_pids: Set[int] = set()
+        self._running_uuids: Set[str] = set()
 
-        self._pid_status: Dict[int, WorkerStatus] = {}
-        self._pid_process: Dict[int, subprocess.Popen] = {}
+        self._uuid_status: Dict[str, WorkerStatus] = {}
+        self._uuid_flag: Dict[str, subprocess.Popen] = {}
+        self._uuid_future: Dict[str, concurrent.futures.Future] = {}
 
     async def start(self) -> int:
-        """Starts a worker to backtest an algorithm. Work
-        in progress
-
-        Returns
-        -------
-        pid : int
-            PID of process that was started
-        """
         raise NotImplementedError
 
-    def _add_worker(self, pid: int, process: subprocess.Popen) -> None:
+    def _add_process(self, uuid: str, flag: multiprocessing.Event, 
+                    future: concurrent.futures.Future) -> None:
         """Tracks new process in class variables.
 
         Parameters
         ----------
-        pid : int
-            PID of new process to track.
-        process : subprocess.Popen
-            Process object to track.
+        uuid : str
+            uuid of new process to track.
+        process : multiprocessing.Event
+            Event to set to cancel task
         """
-        self._manager._cur_worker_count += 1
-        logger.error(f"Added pid {pid}")
-        self._running_pids.add(pid)
+        self._manager._cur_process_count += 1
+        logger.error(f"Added uuid {uuid}")
+        self._running_uuids.add(uuid)
 
-        self._pid_status[pid] = WorkerStatus.WORKING
-        self._pid_process[pid] = process
+        self._uuid_status[uuid] = WorkerStatus.WORKING
+        self._uuid_flag[uuid] = flag
+        self._uuid_future[uuid] = future
 
-    def stop(self, pid: int) -> None:
-        """Takes a PID of a backtest worker and terminates it.
+    def stop(self, uuid: str) -> None:
+        """Takes a uuid of process and terminates it.
 
         Parameters
         ----------
-        pid : int
-            PID of worker to stop
+        uuid : str
+            uuid of process to stop
 
         Raises
         ------
         ValueError
-            Raises ValueError if invalid PID or PID is not running
+            Raises ValueError if invalid uuid or uuid is not running
         """
-        if pid not in self._running_pids:
-            raise ValueError(f"{pid} is invalid or not running")
+        if uuid not in self._running_uuids:
+            raise ValueError(f"{uuid} is invalid or not running")
 
-        os.kill(pid, signal.SIGTERM)
-        self._remove_worker(pid)
+        flag = self._uuid_flag[uuid]
+        flag.set()
+        self._remove_process(uuid)
 
-    def _remove_worker(self, pid: int) -> None:
-        """Removes worker from class variables.
+    def _remove_process(self, uuid: int) -> None:
+        """Removes process from class variables.
 
         Parameters
         ----------
-        pid : int
-            PID of new process to remove.
+        uuid : int
+            uuid of new process to remove.
 
         Raises
         ______
         ValueError
-            Raises ValueError if invalid PID or PID is not running
+            Raises ValueError if invalid uuid or uuid is not running
         """
-        self._manager._cur_worker_count -= 1
-        self._running_pids.remove(pid)
-        self._pid_status[pid] = WorkerStatus.STOPPED
-        self._pid_process.pop(pid)
+        self._manager._cur_process_count -= 1
+        self._running_uuids.remove(uuid)
+        self._uuid_status[uuid] = WorkerStatus.STOPPED
+        self._uuid_flag.pop(uuid)
+        self._uuid_future.pop(uuid)
 
-    def status(self, pid: int) -> Dict[str, Union[List[str], str]]:
-        """Takes PID of process and returns the operational status.
+    def status(self, uuid: int) -> Dict[str, Union[List[str], str]]:
+        """Takes uuid of process and returns the operational status.
 
         Parameters
         ----------
-        pid : int
-            PID of web socket to get status of
+        uuid : int
+            uuid of web socket to get status of
 
         Returns
         -------
         status_dict : Dict[int, Dict[str, Union[List[str], str]]]
-            Dictionary containing "status" of PID.
+            Dictionary containing "status" of uuid.
 
         Raises
         ------
         ValueError
-            Raises ValueError if unknown PID
+            Raises ValueError if unknown uuid
         """
-        if pid not in self._pid_status:
-            raise ValueError(f"Unknown PID {pid}")
+        if uuid not in self._uuid_status:
+            raise ValueError(f"Unknown uuid {uuid}")
 
         self._update_status()
 
         status_dict = {}
-        status_dict['status'] = str(self._pid_status[pid].value)
+        status_dict['status'] = str(self._uuid_status[uuid].value)
 
         return status_dict
 
     def status_all(self) -> Dict[int, Dict[str, Union[List[str], str]]]:
-        """Returns status of all active PIDs.
+        """Returns status of all active uuids.
 
         Returns
         -------
-        pid_statuses : Dict[int, Dict[str, Union[List[str], str]]]
-            Dictionary mapping PIDs to dictionary containing values
+        uuid_statuses : Dict[int, Dict[str, Union[List[str], str]]]
+            Dictionary mapping uuids to dictionary containing values
             returned by .status.
         """
-        pid_statuses = {}
+        uuid_statuses = {}
 
-        for pid in self._pid_status:
-            pid_statuses[pid] = self.status(pid)
+        for uuid in self._uuid_status:
+            uuid_statuses[uuid] = self.status(uuid)
 
-        return pid_statuses
+        return uuid_statuses
 
     def clear_status(self):
         """Removes all STOPPED or FAILED websockets"""
-        pid_to_clear = []
-        for pid, status in self._pid_status.items():
+        uuid_to_clear = []
+        for uuid, status in self._uuid_status.items():
             if status in [WorkerStatus.STOPPED, WorkerStatus.FAILED]:
-                pid_to_clear.append(pid)
+                uuid_to_clear.append(uuid)
 
-        for pid in pid_to_clear:
-            self._pid_status.pop(pid)
+        for uuid in uuid_to_clear:
+            self._uuid_status.pop(uuid)
 
     def _update_status(self):
         """
         Checks whether running processes are still operational
         """
-        failed_pids = []
-        for pid in self._running_pids:
-            process = self._pid_process[pid]
-            logger.error(f"STATUS {pid}: {process.poll()}")
-            if process.poll() is not None and process.poll() < 0:
-                failed_pids.append(pid)
+        failed_uuids = []
+        for uuid in self._running_uuids:
+            future = self._uuid_future[uuid]
+            if future.done() and future.exception():
+                failed_uuids.append(uuid)
 
-        for pid in failed_pids:
-            self._remove_worker(pid)
+        for uuid in failed_uuids:
+            self._remove_process(uuid)
 
     def shutdown(self):
         """Stops all running web sockets. Object should not
         be used again after calling this method"""
-        for pid in self._running_pids.copy():
-            logger.error(f"Stopping {pid}")
-            self.stop(pid)
+        for uuid in self._running_uuids.copy():
+            logger.error(f"Stopping {uuid}")
+            self.stop(uuid)
