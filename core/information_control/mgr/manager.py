@@ -7,6 +7,9 @@ from typing import Optional
 import logging
 import asyncio
 
+from concurrent.futures import ProcessPoolExecutor
+import multiprocessing
+
 from .process_managers.backtest_manager import BacktestManager
 from .process_managers.web_socket_manager import WebSocketManager
 
@@ -42,12 +45,16 @@ class Manager:
         self._max_cores = multiprocessing.cpu_count()
         self._cur_worker_count = 0
 
+        self._executor = ProcessPoolExecutor(self._max_cores)
+        self._mp_manager = multiprocessing.Manager()
+
         self._web_socket_manager = WebSocketManager(self)  # TODO
         self._backtest_manager = BacktestManager(self)
 
     def shutdown(self):
         """Deallocates all necessary resources. No manager operations
         should be done after calling this function."""
+        self._executor.shutdown()
         self.web_sockets.shutdown()
         logger.error("Shutting down backtest")
         self.backtest.shutdown()
@@ -66,9 +73,9 @@ class Manager:
         return self._backtest_manager
 
 
-def asyncrun():
-    m = Manager()
-    m.web_sockets.start(["BTC-USDT", "ETH-USDT"])
-
 def main():
-    async
+    m = Manager()
+    m.web_sockets.start(["ETH/USDT", "BTC/USDT"])
+    print("DONE")
+    return
+    

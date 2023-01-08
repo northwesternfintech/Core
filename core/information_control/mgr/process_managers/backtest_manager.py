@@ -26,7 +26,7 @@ class BacktestManager(ProcessManager):
         super().__init__(manager)
 
     async def start(self, mode='historical',
-              block=False, **kwargs) -> int:
+                    block=False, **kwargs) -> int:
         """Starts a worker to backtest an algorithm.
 
         Parameters
@@ -66,7 +66,7 @@ class BacktestManager(ProcessManager):
             cmd.append(f"--{kwarg_name} {kwarg_val} ")
 
         logger.error(''.join(cmd).split())
-        process = await asyncio.create_subprocess_exec(''.join(cmd).split())
+        process = await asyncio.create_subprocess_exec(''.join(cmd).split(), stdin=self._manager.web_sockets.process.stdout)
         pid = process.pid
 
         # Update status

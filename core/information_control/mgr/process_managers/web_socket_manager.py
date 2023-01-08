@@ -7,8 +7,11 @@ import psutil
 import time
 import asyncio
 
+import concurrent.futures
+
 from ..workers.status import WorkerStatus
 from .process_manager import ProcessManager
+from ..workers.web_socket_worker import WebSocketWorker
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +39,9 @@ class WebSocketManager(ProcessManager):
         super().__init__(manager)
 
         self._running_tickers: Set[str] = set()
-        self._pid_tickers: Dict[int, Set[str]] = {}
+        self._ticker_queues: Dict = {}
 
-    async def start(self, tickers: List[str]) -> int:
+    def start(self, tickers: List[str]) -> int:
         """Takes a list of ticker names and starts a websocket to retrieve
         ticker information in a separate processs. Currently there will only
         be a single thread running in each process.
@@ -73,27 +76,43 @@ class WebSocketManager(ProcessManager):
         if self._manager._cur_worker_count >= self._manager._max_cores:
             raise ValueError("At max process count. Cancel processes to start more")
 
+        ws_worker = WebSocketWorker(tickers)
+
+        ml1_queues = {}
+        ml2_queues = {}
+
+        for ticker in tickers_set:
+            ml1_queues[ticker] = self._manager._mp_manager.Queue()
+            ml2_queues[ticker] = self._manager._mp_manager.Queue()
+
+        f = self._manager._executor.submit(ws_worker.run, 
+                                           ml1_queues,
+                                           ml2_queues,
+                                           self._manager._mp_manager.Event())
+
+        while True:
+            print(ml1_queues["ETH/USDT"].get())
+
         # TODO: Web socket level verification to ensure ticker names are valid tickers
 
         # Start worker
-        cmd = (
-            f"web-socket-worker "
-            f"--address {self._manager._address} "
-            f"--port {self._manager._pub_port} "
-            f"--tickers {' '.join(tickers)} "
-        )
+        # cmd = (
+        #     f"web-socket-worker "
+        #     f"--tickers {' '.join(tickers)} "
+        # )
 
-        process = await asyncio.create_subprocess_exec(cmd.split())
-        pid = process.pid
+        # process = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE)
+        # self.process = process
+        # pid = process.pid
 
-        # Update status
-        self._add_worker(pid, process)
+        # # Update status
+        # self._add_worker(pid, process)
 
-        self._running_tickers.update(tickers_set)
-        self._pid_tickers[pid] = tickers_set
+        # self._running_tickers.update(tickers_set)
+        # self._pid_tickers[pid] = tickers_set
 
-        print(pid)
-        await process.wait()
+        # print(pid)
+        # await process.wait()
 
     def stop(self, pid: int) -> None:
         """Takes a PID of a web socket process and terminates it.

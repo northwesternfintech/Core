@@ -6,8 +6,7 @@ import signal
 from typing import List, Optional
 import time
 
-import zmq
-import zmq.asyncio
+import sys
 
 
 class BacktestWorker:
@@ -39,15 +38,12 @@ class BacktestWorker:
         """Pulls data from interchange and places it on
         live queue for backtesting.
         """
-        self._context = zmq.asyncio.Context()
-        self._socket = self._context.socket(zmq.SUB)
-        self._socket.connect(f"tcp://{self._address}:{self._port}")
-
-        for ticker in self._tickers:
-            self._socket.setsockopt_string(zmq.SUBSCRIBE, ticker)
-
+        loop = asyncio.get_event_loop()
+        reader = asyncio.StreamReader()
+        protocol = asyncio.StreamReaderProtocol(reader)
+        await loop.connect_read_pipe(lambda: protocol, sys.stdin)
         while True:
-            data = await self._socket.recv()
+            data = await reader.readline()
             await self._live_queue.put(data)
 
     async def _live_consume(self, **kwargs):
@@ -62,7 +58,7 @@ class BacktestWorker:
             data = await self._live_queue.get()
             self._live_queue.task_done()
             t = time.time()
-            d = json.loads(data[9:])
+            d = json.loads()
             
             if "time" in d:
                 print(t - int(d['time']))
