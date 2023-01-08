@@ -48,7 +48,7 @@ class ProcessManager(ABC):
         raise NotImplementedError
 
     def _add_process(self, uuid: str, flag: multiprocessing.Event, 
-                    future: concurrent.futures.Future) -> None:
+                     future: concurrent.futures.Future) -> None:
         """Tracks new process in class variables.
 
         Parameters

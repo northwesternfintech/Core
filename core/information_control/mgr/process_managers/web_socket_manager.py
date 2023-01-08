@@ -87,6 +87,7 @@ class WebSocketManager(ProcessManager):
         for ticker in tickers_set:
             ml1_queues[ticker] = self._manager._mp_manager.Queue()
             ml2_queues[ticker] = self._manager._mp_manager.Queue()
+            self._ticker_queues[ticker] = (ml1_queues[ticker], ml2_queues[ticker])
 
         future = self._manager._executor.submit(ws_worker.run, 
                                                 ml1_queues,

@@ -3,8 +3,10 @@ import signal
 import subprocess
 from typing import Dict, List, Set, Tuple, Union
 import asyncio
+import uuid
 
 from ..workers.status import WorkerStatus
+from ..workers.backtest_worker import BacktestWorker
 from .process_manager import ProcessManager
 import logging
 
@@ -25,9 +27,9 @@ class BacktestManager(ProcessManager):
         """
         super().__init__(manager)
 
-    async def start(self, mode='historical',
-                    block=False, **kwargs) -> int:
-        """Starts a worker to backtest an algorithm.
+    def start(self, mode='historical',
+              block=False, **kwargs) -> int:
+        """Starts a process to backtest an algorithm.
 
         Parameters
         ----------
@@ -46,37 +48,38 @@ class BacktestManager(ProcessManager):
 
         Returns
         -------
-        pid : int
-            PID of process that was started
+        uuid : int
+            uuid of process that was started
 
         Raises
         ------
         Optional[ValueError]
             Raises ValueError if invalid inputs
         """
-        if self._manager._cur_worker_count >= self._manager._max_cores:
+        if self._manager._cur_process_count >= self._manager._max_cores:
             raise ValueError("At max process count. Cancel processes to start more")
 
-        cmd = [
-            f"backtest-worker "
-            f"--mode {mode} "
-        ]
+        backtest_worker = BacktestWorker()
+        flag = self._manager._mp_manager.Event()
 
-        for kwarg_name, kwarg_val in kwargs.items():
-            cmd.append(f"--{kwarg_name} {kwarg_val} ")
+        future = None
+        match mode:
+            case 'live':
+                future = self._manager._executor.submit(backtest_worker.run_live, 
+                                                        kwargs['tickers'],
+                                                        self._manager.web_sockets._ticker_queues,
+                                                        flag)
+            case 'historical':
+                pass
+            case _:
+                raise ValueError(f"Unexpected mode {mode}")
 
-        logger.error(''.join(cmd).split())
-        process = await asyncio.create_subprocess_exec(''.join(cmd).split(), stdin=self._manager.web_sockets.process.stdout)
-        pid = process.pid
+        process_uuid = str(uuid.uuid4())
 
         # Update status
-        self._add_worker(pid, process)
+        self._add_process(process_uuid, flag, future)
 
-        if block:
-            process.wait()
-
-        return pid
-
+        return process_uuid
 
 def main():
     pass

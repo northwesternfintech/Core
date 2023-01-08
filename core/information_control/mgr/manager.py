@@ -77,6 +77,11 @@ def main():
     m = Manager()
     u = m.web_sockets.start(["ETH/USDT", "BTC/USDT"])
     print("HERE")
-    m.web_sockets.stop(u)
+    v = m.backtest.start(mode='live', tickers=['BTC/USDT', 'ETH/USDT'])
+
+    time.sleep(2)
+    # m.backtest.stop(v)
+    print(m.backtest.status_all())
+    # m.web_sockets.stop(u)
     print(m.web_sockets.status_all())
     

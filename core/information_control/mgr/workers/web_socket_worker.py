@@ -59,10 +59,10 @@ class WebSocketWorker:
                 for task in self._consume_tasks:
                     task.cancel()
 
-                for q in self._ml1_queues:
+                for q in self._ml1_queues.values():
                     q.put(None)
 
-                for q in self._ml2_queues:
+                for q in self._ml2_queues.values():
                     q.put(None)
 
                 return

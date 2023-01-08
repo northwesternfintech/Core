@@ -41,6 +41,7 @@ class ccxtws():
                     )
 
                     msgData["time"] = currDateTime
+                    msgData["timestr"] = time.time()
                     if msgData != {} and currDateTime != []:
                         # print(self.maindf)
                         await self.queue_1.put(msgData)
