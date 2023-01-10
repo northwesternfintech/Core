@@ -10,8 +10,16 @@ import time
 
 class ccxtws():
 
+    exchangeDict = {
+        "kraken": ccxt.async_support.kraken(),
+        "binance": ccxt.async_support.binanceus(),
+        "kucoin": ccxt.async_support.kucoin(),
+        "gemini": ccxt.async_support.gemini(),
+        "coinbase": ccxt.async_support.coinbase(),
+    }
+
     def __init__(self, exchange, queue_1, queue_2, coins):
-        # self.exchange = ccxt.async_support.kraken()
+        self.exchange = self.exchangeDict[exchange]
         self.queue_1 = queue_1
         self.queue_2 = queue_2
         self.coins = coins
@@ -25,7 +33,6 @@ class ccxtws():
             print("No fetchTickers!")
             return
         try:
-            self.exchange = ccxt.async_support.kraken()
             while True:
                 m1Data = await self.exchange.fetch_tickers(symbols=self.coins)
                 msgData = {}

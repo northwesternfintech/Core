@@ -38,11 +38,12 @@ async def main(exchanges, coins):  # TODO: Don't think this needs to be async
 
         # for i, exchange in enumerate(exchanges):
         try:
-            # Initializing web sockets as the program traverses through the try except
-            # layer to avoid unnecessarily initializing websockets
             # ws = ccxtws('ccxt.' + exchanges[0] + '()', q, r, coins)
-            ws = ccxtws("fuck", q, r, coins=["ETH/USD", "BTC/USD"])
-            future = executor.submit(ws.activate)
+
+            for exchange in exchanges:
+                ws = ccxtws(exchange, q, r, coins=coins)
+                future = executor.submit(ws.activate)
+
             while True:
                 print(future)
                 print(future.result())
