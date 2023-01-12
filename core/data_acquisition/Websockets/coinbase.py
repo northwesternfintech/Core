@@ -78,7 +78,7 @@ class CoinbaseWebSocket(WebSocket):
                     elif temp_json['type'] == 'l2update':
                         curr_dt = temp_json['time'].replace('Z', '')
                         curr_dt = curr_dt.replace('T', ' ')
-                        for update in enumerate(temp_json['changes']):
+                        for update in temp_json['changes']:
                             msg_data = {
                                     'exchange': 'coinbase',
                                     'ticker': temp_json['product_id'],
@@ -91,7 +91,7 @@ class CoinbaseWebSocket(WebSocket):
                                 print('working 2')
                             if msg_data != [] and time_id != []:
                                 df = pd.DataFrame(data=msg_data, index=time_id)
-                                print(df)
+                                # print(df)
                                 self.queue_2.put(df) 
         except Exception:
             print(traceback.format_exc())
@@ -104,6 +104,7 @@ async def main(coins):
     cwr = CoinbaseWebSocket(q, r, coins)
     await cwr.async_run()  # TODO: Don't access private methods
 
+# Example Run
 q = multiprocessing.Queue()
 r = multiprocessing.Queue()
 coins = ['BTC-USDT', 'ETH-USDT']
