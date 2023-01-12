@@ -57,7 +57,7 @@ class BinanceWebSocket(WebSocket):
 
     async def async_run(self):
         try:
-            async with websockets.connect('wss://stream.binance.com:9443/stream?', max_size = 1_000_000_000) as websocket:
+            async with websockets.connect('wss://stream.binance.usçç:9443/stream?', max_size = 1_000_000_000) as websocket:
                 await websocket.send(json.dumps(self.sub_message))
                 first = True
                 while True:
