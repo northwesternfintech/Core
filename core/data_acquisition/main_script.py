@@ -1,21 +1,16 @@
 import concurrent.futures as cf
 import multiprocessing
 import multiprocessing as mp
-import pandas as pd
 import asyncio
 import traceback
-# import schedule
-# import datetime
-# import os
-import ccxt
-from ccxtpro_websocket.ccxttest import ccxtws
+from .ccxt_websocket import CCXTWebSocket
 import time
 import nest_asyncio
 
 nest_asyncio.apply()
 
 
-async def main(exchanges, coins):  # TODO: Don't think this needs to be async
+async def async_main(exchanges, coins):  # TODO: Don't think this needs to be async
     with cf.ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
 
         # Initializing the multiprocessing queues for the websockets to use
@@ -41,7 +36,7 @@ async def main(exchanges, coins):  # TODO: Don't think this needs to be async
             # Initializing web sockets as the program traverses through the try except
             # layer to avoid unnecessarily initializing websockets
             # ws = ccxtws('ccxt.' + exchanges[0] + '()', q, r, coins)
-            ws = ccxtws("fuck", q, r, coins=["ETH/USD", "BTC/USD"])
+            ws = CCXTWebSocket("", q, r, coins=["ETH/USD", "BTC/USD"])
             future = executor.submit(ws.activate)
             while True:
                 print(future)
@@ -54,13 +49,7 @@ async def main(exchanges, coins):  # TODO: Don't think this needs to be async
 
 
 # Test if it works!
-def activate(exchanges, coins):
-    if __name__ == "__main__":
-        asyncio.get_event_loop().run_until_complete(main(exchanges, coins))
-
-
-exchanges = ["kraken", "binance", "kucoin", "gemini", "coinbase"]
-coins = ["BTC/USD", "ETH/USD"]
-# print(ccxt.kraken().fetchTickers())
-# (ccxt.kraken().fetchTickers(symbols=coins))
-activate(exchanges, coins)
+def main():
+    exchanges = ["kraken", "binance", "kucoin", "gemini", "coinbase"]
+    coins = ["BTC/USD", "ETH/USD"]
+    asyncio.get_event_loop().run_until_complete(async_main(exchanges, coins))
