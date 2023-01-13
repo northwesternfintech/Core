@@ -78,5 +78,6 @@ class BacktestManager(ProcessManager):
 
         return process_uuid
 
+
 def main():
     pass
