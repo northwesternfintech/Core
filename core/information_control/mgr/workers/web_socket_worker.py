@@ -1,13 +1,6 @@
 import argparse
 import asyncio
-import functools
-import json
-import signal
 from typing import List
-import time
-import multiprocessing
-
-import zmq.asyncio
 
 from ..coinbase import ccxtws
 
@@ -53,6 +46,7 @@ class WebSocketWorker:
 
         while True:
             if flag.is_set():
+                await self._ccxt_ws.exchange.close()
                 for task in self._produce_tasks:
                     task.cancel()
 
@@ -66,7 +60,7 @@ class WebSocketWorker:
                     q.put(None)
 
                 return
-            
+
             await asyncio.sleep(0.5)
 
     async def _run_async(self, ml1_queues, ml2_queues, flag):
@@ -75,16 +69,22 @@ class WebSocketWorker:
         """
         self._ml1_queues = ml1_queues
         self._ml2_queues = ml2_queues
-        
+
         self._ws_ml1_queue = asyncio.Queue()
         self._ws_ml2_queue = asyncio.Queue()
 
-        cwr = ccxtws("", self._ws_ml1_queue, self._ws_ml2_queue, self._tickers)
+        self._ccxt_ws = ccxtws("", self._ws_ml1_queue, 
+                               self._ws_ml2_queue, 
+                               self._tickers)
 
-        self._produce_tasks = [asyncio.create_task(cwr.async_run())]
+        self._produce_tasks = [asyncio.create_task(self._ccxt_ws.async_run())]
         self._flag_task = [asyncio.create_task(self.check_flag(flag))]
-        self._consume_tasks = [asyncio.create_task(self._consume(self._ws_ml1_queue, self._ml1_queues)),
-                               asyncio.create_task(self._consume(self._ws_ml2_queue, self._ml2_queues))]
+        self._consume_tasks = [
+            asyncio.create_task(self._consume(self._ws_ml1_queue, 
+                                              self._ml1_queues)),
+            asyncio.create_task(self._consume(self._ws_ml2_queue, 
+                                              self._ml2_queues))
+        ]
 
         await asyncio.gather(*self._produce_tasks)
 
@@ -92,12 +92,7 @@ class WebSocketWorker:
         """
         Wrapper function for starting run_async.
         """
-        try:
-            asyncio.run(self._run_async(ml1_queue, ml2_queue, flag))
-        except Exception as e:
-            print(e)
-            raise e
-            asyncio.run(self._send_termination())
+        asyncio.run(self._run_async(ml1_queue, ml2_queue, flag))
 
 
 def cli_run():

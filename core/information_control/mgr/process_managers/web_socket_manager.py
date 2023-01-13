@@ -1,18 +1,9 @@
-import os
-import signal
-import subprocess
-from typing import Dict, List, Set, Tuple, Union
 import logging
-import psutil
-import time
-import asyncio
 import uuid
+from typing import Dict, List, Set, Union
 
-import concurrent.futures
-
-from ..workers.status import WorkerStatus
-from .process_manager import ProcessManager
 from ..workers.web_socket_worker import WebSocketWorker
+from .process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +185,7 @@ class WebSocketManager(ProcessManager):
             uuid_statuses[uuid] = self.status(uuid)
 
         return uuid_statuses
+
 
 def main():
     pass

@@ -1,13 +1,11 @@
-import os
-import signal
-import subprocess
-from typing import Dict, List, Set, Tuple, Union
+import concurrent.futures
 import logging
 import multiprocessing
-import concurrent.futures
+import subprocess
+from abc import ABC
+from typing import Dict, List, Set, Union
 
 from ..workers.status import WorkerStatus
-from abc import ABC
 
 logger = logging.getLogger(__name__)
 

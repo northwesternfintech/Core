@@ -5,7 +5,6 @@ import os
 import subprocess
 import requests
 
-from typing import List
 from tabulate import tabulate
 
 from .mgr.utils import find_open_ports
@@ -29,8 +28,11 @@ class NUFTConfig:
         server_port = self.config['server'].get('port')
         server_host = self.config['server'].get('host')
 
-        if not (server_port and server_host):
-            raise ClickException("Missing server port or host in config!")
+        if not server_host:
+            raise ClickException("Missing server host in config")
+
+        if not server_port:
+            raise ClickException("Missing server port in config")
 
         self.server_address = f"http://{server_host}:{server_port}"
 
@@ -65,23 +67,16 @@ def start_server(ctx):
 
     manager_path = nuft_config.nuft_dir
 
-    interchange_host = nuft_config.config['interchange']['host']
-    interchange_pub_port, interchange_sub_port = list(map(str, find_open_ports(2)))
-    nuft_config.config['interchange']['pub_port'] = interchange_pub_port
-    nuft_config.config['interchange']['sub_port'] = interchange_sub_port
-
     cmd = (
            "manager_server "
            f"--server-address {server_host} "
            f"--server-port {server_port} "
            f"--manager-path {manager_path} "
-           f"--interchange-address {interchange_host} "
-           f"--interchange-pub-port {interchange_pub_port} "
-           f"--interchange-sub-port {interchange_sub_port} "
     )
 
     try:
-        subprocess.Popen(cmd.split(), shell=False,
+        subprocess.Popen(cmd.split(), 
+                         shell=False,
                          start_new_session=True)
     except Exception as e:
         raise ClickException(f"Failed to start server: {e}")
@@ -123,12 +118,12 @@ def web_socket_handler():
 @click.pass_context
 def web_socket_start(ctx, ticker_names):
     """Takes multiple ticker names to start
-    
+
     e.g. `nuft websocket start BTC-USDT ETH USDT`
     """
     ticker_names = list(ticker_names)
     if not ticker_names:
-        raise ClickException("Missing ticker names!")
+        raise ClickException("Missing ticker names")
 
     nuft_config = ctx.obj
 
@@ -138,14 +133,13 @@ def web_socket_start(ctx, ticker_names):
     }
 
     res = requests.post(path, json=payload)
-    pid = res.text
 
-    if res.status_code == 200:
-        print(f"Started {ticker_names} at {pid}")
-    else:
-        print(res.status_code)
-        print(res.text)
-        raise ClickException(res.text)
+    match res.status_code:
+        case 200:
+            uuid = res.text
+            print(f"Started {ticker_names} at {uuid}")
+        case _:
+            ClickException(f"Server returned {res.status_code}: {res.text}")
 
 
 @web_socket_handler.command('stop')
@@ -157,21 +151,21 @@ def web_socket_start(ctx, ticker_names):
     help="whether to stop all web sockets"
 )
 @click.argument(
-    'pids',
+    'uuids',
     nargs=-1
 )
 @click.pass_context
-def web_socket_stop(ctx, stop_all, pids):
+def web_socket_stop(ctx, stop_all, uuids):
     """Takes multiple pids of web sockets to stop
 
     e.g. `nuft websocket stop 123 456`
     """
-    pids = list(pids)
-    if stop_all and pids:
-        raise ClickException("Provided pids while using --all flag")
+    uuids = list(uuids)
+    if stop_all and uuids:
+        raise ClickException("Provided uuids while using --all flag")
 
-    if not (stop_all or pids):
-        raise ClickException("Missing pids")
+    if not (stop_all or uuids):
+        raise ClickException("Missing uuids")
 
     nuft_config = ctx.obj
 
@@ -182,15 +176,17 @@ def web_socket_stop(ctx, stop_all, pids):
         path = f"{nuft_config.server_address}/web_sockets/stop"
 
     payload = {
-        "pids": pids
+        "uuids": uuids
     }
 
     res = requests.post(path, json=payload)
 
-    if res.status_code == 200:
-        print(f"Stopped {pids if pids else 'all websockets'}!")
-    else:
-        raise ClickException(res.text)
+    match res.status_code:
+        case 200:
+            print(f"Stopped {uuids if uuids else 'all websockets'}!")
+        case _:
+            print(f"Server returned {res.status_code}: {res.text}")
+            ClickException(f"Server returned {res.status_code}: {res.text}")
 
 
 @web_socket_handler.command('status')
@@ -202,7 +198,7 @@ def web_socket_stop(ctx, stop_all, pids):
 )
 @click.pass_context
 def web_socket_status(ctx, clear):
-    headers = ['PID', 'Ticker Names', 'Status']
+    headers = ['UUID', 'Ticker Names', 'Status']
     data = []
 
     nuft_config = ctx.obj
@@ -221,11 +217,11 @@ def web_socket_status(ctx, clear):
         raise ClickException(res.text)
 
     res_json = res.json()
-    for pid, pid_data in res_json.items():
-        ticker_names = pid_data['tickers']
-        status = pid_data['status']
+    for uuid, uuid_data in res_json.items():
+        ticker_names = uuid_data['tickers']
+        status = uuid_data['status']
 
-        data.append([pid, ' '.join(ticker_names), status])
+        data.append([uuid, ' '.join(ticker_names), status])
 
     print(tabulate(data, headers, tablefmt='outline'))
 
@@ -255,8 +251,8 @@ def backtest_handler():
 )
 @click.pass_context
 def backtest_start(ctx, mode):
+    print(ctx.args)
     kwargs = dict([item.strip('--').split('=') for item in ctx.args])
-    print(kwargs)
 
     nuft_config = ctx.obj
 
@@ -267,12 +263,13 @@ def backtest_start(ctx, mode):
     payload.update(kwargs)
 
     res = requests.post(path, json=payload)
-    pid = res.text
 
-    if res.status_code == 200:
-        print(f"Started backtest at {pid}")
-    else:
-        raise ClickException(res.text)
+    match res.status_code:
+        case 200:
+            uuid = res.text
+            print(f"Started backtest at {uuid}")
+        case _:
+            ClickException(f"Server returned {res.status_code}: {res.text}")
 
 
 @backtest_handler.command('stop')
@@ -284,20 +281,20 @@ def backtest_start(ctx, mode):
     help="whether to stop all backtests"
 )
 @click.argument(
-    'pids',
+    'uuids',
     nargs=-1
 )
 @click.pass_context
-def backtest_stop(ctx, stop_all, pids):
+def backtest_stop(ctx, stop_all, uuids):
     """Takes multiple pids of backtests to stop
 
     e.g. `nuft backtest stop 123 456`
     """
-    pids = list(pids)
-    if stop_all and pids:
+    uuids = list(uuids)
+    if stop_all and uuids:
         raise ClickException("Provided pids while using --all flag")
 
-    if not (stop_all or pids):
+    if not (stop_all or uuids):
         raise ClickException("Missing pids")
 
     nuft_config = ctx.obj
@@ -309,15 +306,16 @@ def backtest_stop(ctx, stop_all, pids):
         path = f"{nuft_config.server_address}/backtest/stop"
 
     payload = {
-        "pids": pids
+        "uuids": uuids
     }
 
     res = requests.post(path, json=payload)
 
-    if res.status_code == 200:
-        print(f"Stopped {pids if pids else 'all backtests'}!")
-    else:
-        raise ClickException(res.text)
+    match res.status_code:
+        case 200:
+            print(f"Stopped {uuids if uuids else 'all backtests'}!")
+        case _:
+            ClickException(f"Server returned {res.status_code}: {res.text}")
 
 
 @backtest_handler.command('status')
@@ -329,7 +327,7 @@ def backtest_stop(ctx, stop_all, pids):
 )
 @click.pass_context
 def backtest_status(ctx, clear):
-    headers = ['PID', 'Status']
+    headers = ['UUID', 'Status']
     data = []
 
     nuft_config = ctx.obj
@@ -348,14 +346,13 @@ def backtest_status(ctx, clear):
         raise ClickException(res.text)
 
     res_json = res.json()
-    for pid, pid_data in res_json.items():
-        status = pid_data['status']
+    for uuid, uuid_data in res_json.items():
+        status = uuid_data['status']
 
-        data.append([pid, status])
+        data.append([uuid, status])
 
     print(tabulate(data, headers, tablefmt='outline'))
 
 
 def cli_run():
     app()
-

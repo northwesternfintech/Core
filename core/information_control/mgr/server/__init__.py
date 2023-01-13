@@ -79,9 +79,9 @@ def start_web_sockets():
         return "No ticker names provided", 400
 
     try:
-        pid = manager.web_sockets.start(ticker_names)
+        uuid = manager.web_sockets.start(ticker_names)
 
-        return str(pid), 200
+        return str(uuid), 200
     except ValueError:
         return f"Failed to find tickers {ticker_names}", 404
     except Exception as e:
@@ -91,13 +91,13 @@ def start_web_sockets():
 
 @app.route('/web_sockets/stop', methods=['POST'])
 def stop_web_sockets():
-    """Stops web sockets. Validating web socket PIDs is the
+    """Stops web sockets. Validating web socket uuids is the
     responsibility of the Manager.
 
     Request Parameters
     ------------------
-    pid : List[str]
-        Pid of web sockets to stop
+    uuid : List[str]
+        uuid of web sockets to stop
 
     Returns
     -------
@@ -106,28 +106,28 @@ def stop_web_sockets():
     400
         If malformed inputs
     404
-        If PID name can't be found
+        If uuid name can't be found
     500
         If fails to stop websocket
     """
     request_params = request.json
-    pids = None
+    uuids = None
 
     try:
-        pids = request_params["pids"]
+        uuids = request_params["uuids"]
     except KeyError:
-        return "Missing field 'pids' in json", 400
+        return "Missing field 'uuids' in json", 400
 
-    if not pids:
-        return "No PID provided", 400
+    if not uuids:
+        return "No uuid provided", 400
 
-    for pid in pids:
+    for uuid in uuids:
         try:
-            manager.web_sockets.stop(int(pid))
+            manager.web_sockets.stop(int(uuid))
         except ValueError:
-            return f"Failed to find PID {pid}", 404
+            return f"Failed to find uuid {uuid}", 404
         except Exception as e:
-            logger.exception(f"Manager failed to stop {pid}")
+            logger.exception(f"Manager failed to stop {uuid}")
             return str(e), 500
 
     return '', 200
@@ -144,48 +144,48 @@ def stop_all_web_sockets():
     500
         If fails to stop websocket
     """
-    for pid in manager.web_sockets._running_pids.copy():
+    for uuid in manager.web_sockets._running_uuids.copy():
         try:
-            manager.web_sockets.stop(int(pid))
+            manager.web_sockets.stop(int(uuid))
         except ValueError:
-            return f"Failed to find PID {pid}", 404
+            return f"Failed to find uuid {uuid}", 404
         except Exception as e:
-            logger.exception(f"Manager failed to stop {pid}")
+            logger.exception(f"Manager failed to stop {uuid}")
             return str(e), 500
 
     return '', 200
 
 
-@app.route('/web_sockets/status/<int:pid>', methods=['GET'])
-def web_sockets_status(pid):
-    """Returns status of PID
+@app.route('/web_sockets/status/<int:uuid>', methods=['GET'])
+def web_sockets_status(uuid):
+    """Returns status of uuid
 
     Request Parameters
     ------------------
-    pid : str
-        PIDs of web socket to get status of
+    uuid : str
+        uuids of web socket to get status of
 
     Returns
     -------
     str, 200
         If successfully retrieves web socket status
     404
-        If failed to find active PID
+        If failed to find active uuid
     500
         Manager error
     """    
     try:
-        return manager.web_sockets.status(pid), 200
+        return manager.web_sockets.status(uuid), 200
     except ValueError:
-        return f"Failed to find PID {pid}", 404
+        return f"Failed to find uuid {uuid}", 404
     except Exception as e:
-        logger.exception(f"Manager failed to retrieve web socket status of {pid}")
+        logger.exception(f"Manager failed to retrieve web socket status of {uuid}")
         return str(e), 500
 
 
 @app.route('/web_sockets/status/all', methods=['GET'])
 def web_sockets_status_all():
-    """Returns status of all active PIDs
+    """Returns status of all active uuids
 
     Returns
     -------
@@ -244,42 +244,42 @@ def start_backtest():
         return "Missing parameter 'mode'", 400
     try:
         mode = request_params.pop('mode')
-        pid = manager.backtest.start(mode, **request_params)
-        return str(pid), 200
+        uuid = manager.backtest.start(mode, **request_params)
+        return str(uuid), 200
     except Exception as e:
         return str(e), 404
 
 
-@app.route('/backtest/status/<int:pid>', methods=['GET'])
-def backtest_status(pid):
-    """Returns status of PID
+@app.route('/backtest/status/<int:uuid>', methods=['GET'])
+def backtest_status(uuid):
+    """Returns status of uuid
 
     Request Parameters
     ------------------
-    pid : str
-        PIDs of backtest to get status of
+    uuid : str
+        uuids of backtest to get status of
 
     Returns
     -------
     str, 200
         If successfully retrieves backtest status
     404
-        If failed to find active PID
+        If failed to find active uuid
     500
         Manager error
     """    
     try:
-        return manager.backtest.status(pid), 200
+        return manager.backtest.status(uuid), 200
     except ValueError:
-        return f"Failed to find PID {pid}", 404
+        return f"Failed to find uuid {uuid}", 404
     except Exception as e:
-        logger.exception(f"Manager failed to retrieve web socket status of {pid}")
+        logger.exception(f"Manager failed to retrieve web socket status of {uuid}")
         return str(e), 500
 
 
 @app.route('/backtest/status/all', methods=['GET'])
 def backtest_status_all():
-    """Returns status of all active PIDs
+    """Returns status of all active uuids
 
     Returns
     -------
@@ -315,13 +315,13 @@ def backtest_status_clear():
 
 @app.route('/backtest/stop', methods=['POST'])
 def stop_backtests():
-    """Stops backtest. Validating backtest PIDs is the
+    """Stops backtest. Validating backtest uuids is the
     responsibility of the Manager.
 
     Request Parameters
     ------------------
-    pid : List[str]
-        Pid of backtest to stop
+    uuid : List[str]
+        uuid of backtest to stop
 
     Returns
     -------
@@ -330,26 +330,26 @@ def stop_backtests():
     400
         If malformed inputs
     404
-        If PID name can't be found
+        If uuid name can't be found
     """
     request_params = request.json
-    pids = None
+    uuids = None
 
     try:
-        pids = request_params["pids"]
+        uuids = request_params["uuids"]
     except KeyError:
-        return "Missing field 'pid' in json", 400
+        return "Missing field 'uuid' in json", 400
 
-    if not pids:
-        return "No PID provided", 400
+    if not uuids:
+        return "No uuid provided", 400
 
-    for pid in pids:
+    for uuid in uuids:
         try:
-            manager.backtest.stop(int(pid))
+            manager.backtest.stop(int(uuid))
         except ValueError:
-            return f"Failed to find PID {pid}", 404
+            return f"Failed to find uuid {uuid}", 404
         except Exception as e:
-            logger.exception(f"Manager failed to stop {pid}")
+            logger.exception(f"Manager failed to stop {uuid}")
             return str(e), 500
 
     return '', 200
@@ -366,13 +366,13 @@ def stop_all_backtests():
     500
         If fails to stop websocket
     """
-    for pid in manager.backtest._running_pids.copy():
+    for uuid in manager.backtest._running_uuids.copy():
         try:
-            manager.web_sockets.stop(int(pid))
+            manager.web_sockets.stop(int(uuid))
         except ValueError:
-            return f"Failed to find PID {pid}", 404
+            return f"Failed to find uuid {uuid}", 404
         except Exception as e:
-            logger.exception(f"Manager failed to stop {pid}")
+            logger.exception(f"Manager failed to stop {uuid}")
             return str(e), 500
 
     return '', 200
@@ -393,18 +393,7 @@ def cli_run():
         "--manager-path", default=DIR_NUFT,
         help="Path to nuft folder for manager to use"
     )
-    parser.add_argument(
-        "--interchange-address", default='127.0.0.1',
-        help="Address to start interchange on"
-    )
-    parser.add_argument(
-        "--interchange-pub-port", default=50001,
-        help="Pulish port for interchange"
-    )
-    parser.add_argument(
-        "--interchange-sub-port", default=50002,
-        help="Subscription port for interchange"
-    )
+    
     args = parser.parse_args()
 
     log_dir = os.path.join(args.manager_path, "logs")
@@ -450,10 +439,7 @@ def cli_run():
 
     try:
         manager = Manager(
-            path=args.manager_path,
-            address=args.interchange_address,
-            pub_port=args.interchange_pub_port,
-            sub_port=args.interchange_sub_port
+            path=args.manager_path
         )
     except:
         logger.exception("Manager failed to start")

@@ -1,14 +1,8 @@
-import os
-import signal
-import subprocess
-from typing import Dict, List, Set, Tuple, Union
-import asyncio
+import logging
 import uuid
 
-from ..workers.status import WorkerStatus
 from ..workers.backtest_worker import BacktestWorker
 from .process_manager import ProcessManager
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +59,9 @@ class BacktestManager(ProcessManager):
         future = None
         match mode:
             case 'live':
+                if 'tickers' not in kwargs:
+                    raise ValueError("Missing required parameter 'tickers'")
+                
                 future = self._manager._executor.submit(backtest_worker.run_live, 
                                                         kwargs['tickers'],
                                                         self._manager.web_sockets._ticker_queues,

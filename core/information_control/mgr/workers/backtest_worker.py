@@ -1,12 +1,8 @@
 import argparse
-import asyncio
-import functools
 import json
-import signal
-from typing import List, Optional
-import time
+import logging
 
-import sys
+logger = logging.getLogger(__name__)
 
 
 class BacktestWorker:
@@ -25,17 +21,14 @@ class BacktestWorker:
 
             for t in tickers:
                 data = ticker_queues[t][0].get()
-                
+
                 if not data:
                     return
 
-                print(data)
+                print(json.dumps(data))
 
     def run_historical(self, **kwargs):
         pass
-        
-
-
 
 
 def cli_run():
@@ -48,7 +41,7 @@ def cli_run():
     args, unknown = parser.parse_known_args()
     print("HERE")
     kwargs = {}
-    
+
     while unknown:
         raw_arg_name = unknown.pop(0)
 
