@@ -1,14 +1,9 @@
+import logging
 import multiprocessing
 import os
-import signal
-import subprocess
 import time
-from typing import Optional
-import logging
-import asyncio
-
 from concurrent.futures import ProcessPoolExecutor
-import multiprocessing
+from typing import Optional
 
 from .process_managers.backtest_manager import BacktestManager
 from .process_managers.web_socket_manager import WebSocketManager
@@ -23,8 +18,7 @@ class Manager:
     and facilitates the flow of data.
     """
     def __init__(self,
-                 path: Optional[str] = None,
-                 address: str = '127.0.0.1'):
+                 path: Optional[str] = None):
         """Creates a new Manger and allocates resources for the manager to use
         (process pool, queues, etc.). It is the responsibility of the user to
         deallocate these resources using the .shutdown() method.
@@ -39,27 +33,25 @@ class Manager:
 
         self._path = path
 
-        self._address = address
-
         self._max_cores = multiprocessing.cpu_count()
         self._cur_process_count = 0
 
         self._executor = ProcessPoolExecutor(self._max_cores)
         self._mp_manager = multiprocessing.Manager()
 
-        self._web_socket_manager = WebSocketManager(self)  # TODO
+        self._web_socket_manager = WebSocketManager(self)
         self._backtest_manager = BacktestManager(self)
 
     def shutdown(self):
         """Deallocates all necessary resources. No manager operations
         should be done after calling this function."""
-        self._executor.shutdown()
         self.web_sockets.shutdown()
         logger.error("Shutting down backtest")
         self.backtest.shutdown()
 
-        time.sleep(1)  # Delay to allow termination messsages to send
-        os.kill(self._interchange_pid, signal.SIGTERM)
+        time.sleep(1)
+
+        self._executor.shutdown()
 
     @property
     def web_sockets(self) -> WebSocketManager:
