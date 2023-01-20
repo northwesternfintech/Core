@@ -89,3 +89,11 @@ def main():
     print_consumer = ws_factory.get("print")()
     ws = CCXTWebSocket("kraken", ["BTC/USD"], print_consumer)
     ws.run()
+
+
+def test_queue():
+    from .websocket_consumers.websocket_consumer_factory import WebsocketConsumerFactory
+    ws_factory = WebsocketConsumerFactory()
+    queue_consumer = ws_factory.get("queue")()
+    ws = CCXTWebSocket("kraken", ["BTC/USD"], queue_consumer)
+    ws.run()

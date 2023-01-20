@@ -1,12 +1,14 @@
 from .websocket_consumer import WebsocketConsumer
 from .print_ws_consumer import PrintWSConsumer
+from .queue_ws_consumer import QueueWSConsumer
 from typing import Dict
 
 
 class WebsocketConsumerFactory:
     def __init__(self):
         self._factory_map: Dict[str, WebsocketConsumer] = {
-            "print": PrintWSConsumer
+            "print": PrintWSConsumer,
+            "queue": QueueWSConsumer
         }
 
     def get(self, consumer_name: str) -> WebsocketConsumer:
