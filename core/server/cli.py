@@ -25,8 +25,10 @@ class NUFTConfig:
             # TODO: Create default config at location
             pass
 
-        server_port = self.config['server'].get('port')
-        server_host = self.config['server'].get('host')
+        # server_port = self.config['server'].get('port')
+        # server_host = self.config['server'].get('host')
+        server_port = 5000
+        server_host = "127.0.0.1"
 
         if not server_host:
             raise ClickException("Missing server host in config")
@@ -127,12 +129,13 @@ def web_socket_start(ctx, ticker_names):
 
     nuft_config = ctx.obj
 
-    path = f"{nuft_config.server_address}/web_sockets/start"
+    path = f"{nuft_config.server_address}/web_socket/start"
     payload = {
         "ticker_names": ticker_names
     }
 
     res = requests.post(path, json=payload)
+    print(res.text)
 
     match res.status_code:
         case 200:
@@ -171,9 +174,9 @@ def web_socket_stop(ctx, stop_all, uuids):
 
     path = ""
     if stop_all:
-        path = f"{nuft_config.server_address}/web_sockets/stop_all"
+        path = f"{nuft_config.server_address}/web_socket/stop_all"
     else:
-        path = f"{nuft_config.server_address}/web_sockets/stop"
+        path = f"{nuft_config.server_address}/web_socket/stop"
 
     payload = {
         "uuids": uuids
@@ -204,13 +207,13 @@ def web_socket_status(ctx, clear):
     nuft_config = ctx.obj
 
     if clear:
-        path = f"{nuft_config.server_address}/web_sockets/status/clear"
+        path = f"{nuft_config.server_address}/web_socket/status/clear"
         res = requests.post(path)
 
         if res.status_code != 200:
             raise ClickException(res.text)
 
-    path = f"{nuft_config.server_address}/web_sockets/status/all"
+    path = f"{nuft_config.server_address}/web_socket/status/all"
     res = requests.get(path)
 
     if res.status_code != 200:
