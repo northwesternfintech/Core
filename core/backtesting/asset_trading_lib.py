@@ -35,7 +35,7 @@ class asset:
         # calculate the new average price
         curr_average_weight = self.get_average_price() * self.get_amount()
         new_average_weight = price * amount
-        total_amount = self.get_amount + amount
+        total_amount = self.get_amount() + amount
 
         self.average_price = (curr_average_weight + new_average_weight) / total_amount
 
