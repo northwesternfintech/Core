@@ -1,42 +1,55 @@
 import concurrent.futures as cf
 import multiprocessing
 import multiprocessing as mp
-# from kucoin import KucoinWebSocket
-from Websockets.coinbase import CoinbaseWebSocket
-# from gemini import GeminiWebSocket
-from Websockets.binance import BinanceWebSocket
-# from kraken import KrackenWebSocket
-import pandas as pd
 import asyncio
-import schedule
-import datetime
-import os
+import traceback
+from .ccxt_websocket import CCXTWebSocket
+import time
+import nest_asyncio
 
-async def main(coins):  # TODO: Don't think this needs to be async
+nest_asyncio.apply()
+
+
+async def async_main(exchanges, coins):  # TODO: Don't think this needs to be async
     with cf.ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
 
         # Initializing the multiprocessing queues for the websockets to use
-        queue_lvl1 = multiprocessing.Queue()
-        queue_lvl2 = multiprocessing.Queue()
+        manager = multiprocessing.Manager()
+        q = manager.Queue()
+        r = manager.Queue()
 
+        # async def queue_to_csv():
+        #     # TODO: Replace the empty path string to the directory for desired output file
+        #     path = "/Users/jaypark/Downloads/"
+        #     filename = "RAW_CSV_OUTPUT_" + str(time.time()) + ".csv"
+        #     pd.concat([q.get(), r.get()]).to_csv(path + filename)
+        #     await asyncio.sleep(0.1)
+
+        # loop = asyncio.get_event_loop()  # or asyncio.get_running_loop()
+
+        # # Time in seconds (14400 seconds is 4 hours)
+        # timeout = 10
+        # timer = loop.call_later(timeout, lambda: asyncio.ensure_future(queue_to_csv()))
+
+        # for i, exchange in enumerate(exchanges):
         try:
             # Initializing web sockets as the program traverses through the try except
             # layer to avoid unnecessarily initializing websockets
-            coinbase = CoinbaseWebSocket(queue_lvl1, queue_lvl2, coins)
-            executor.submit(coinbase.run())
-        except Exception as e:
-            try:
-                binance = BinanceWebSocket(queue_lvl1, queue_lvl2, coins)
-                executor.submit(binance.run())
-            except:
-                # Try another websocket that was initialized, and if that doesn't work, layer in another try-except
-                # In the end, if none of the websockets work, use an API
-                print("Need to use API")
+            # ws = ccxtws('ccxt.' + exchanges[0] + '()', q, r, coins)
+            ws = CCXTWebSocket("", q, r, coins=["ETH/USD", "BTC/USD"])
+            future = executor.submit(ws.activate)
+            while True:
+                print(future)
+                print(future.result())
+                time.sleep(1)
+
+        except Exception:
+            traceback.print_exc()
+            print("Need to use API")
+
 
 # Test if it works!
-def activate(coins):
-    if __name__ == '__main__':
-        asyncio.get_event_loop().run_until_complete(main(coins))
-
-coins = ['BTH-USDT']
-activate(coins)
+def main():
+    exchanges = ["kraken", "binance", "kucoin", "gemini", "coinbase"]
+    coins = ["BTC/USD", "ETH/USD"]
+    asyncio.get_event_loop().run_until_complete(async_main(exchanges, coins))
