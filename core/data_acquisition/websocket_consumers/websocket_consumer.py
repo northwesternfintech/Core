@@ -34,4 +34,11 @@ class WebsocketConsumer(ABC):
             loop.create_task(self._async_consume(ml2_data))
         ]
 
-        await asyncio.gather(*tasks)
+        try:
+            await asyncio.gather(*tasks)
+        except Exception as _:
+            self._close()
+
+    def _close(self):
+        """Handles all resource cleanup for consumer"""
+        raise NotImplementedError

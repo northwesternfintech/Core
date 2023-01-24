@@ -1,4 +1,5 @@
 import ccxt.async_support
+import ccxt
 import asyncio
 from datetime import datetime
 from typing import List
@@ -16,6 +17,14 @@ class CCXTWebSocket:
             getattr(ccxt.async_support, self._exchange_name)
         except AttributeError:
             raise ValueError(f"Unrecognized exchange {self._exchange_name}")
+
+        self._ccxt_exchange = getattr(ccxt, self._exchange_name)()
+        self._ccxt_exchange.load_markets()
+
+        available_markets = self._ccxt_exchange.markets
+        for c in coins:
+            if c not in available_markets:
+                raise ValueError(f"Invalid coin {c}")
 
     async def _produce_ml1(self):
         while True:
@@ -70,14 +79,24 @@ class CCXTWebSocket:
         self._ml1_queue = asyncio.Queue()
         self._ml2_queue = asyncio.Queue()
 
-        tasks = [
+        self._tasks = [
             asyncio.create_task(self._produce_ml1()),
             asyncio.create_task(self._produce_ml2()),
             asyncio.create_task(self._ws_consumer.consume(self._ml1_queue,
                                                           self._ml2_queue))
         ]
 
-        await asyncio.gather(*tasks)
+        try:
+            await asyncio.gather(*self._tasks)
+        except Exception as e:
+            self._close()
+
+    def _close(self):
+        self._ccxt_exchange.close()
+
+    def shutdown(self):
+        for task in self._tasks:
+            task.cancel()
 
     def run(self):
         asyncio.get_event_loop().run_until_complete(self._run_async())

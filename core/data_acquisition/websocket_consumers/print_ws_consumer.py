@@ -10,3 +10,6 @@ class PrintWSConsumer(WebsocketConsumer):
             data = await data_queue.get()
             print(data)
             data_queue.task_done()
+
+    def _close(self):
+        pass
