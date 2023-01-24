@@ -7,23 +7,19 @@ import portfolio
 import numpy as np
 import time
 
-# imports for algorithms we've made
-import BollingerBandsMultiStock
-
-
 class Strategy:
     def __init__(
         self,
         algo,
         transaction_cost=None,
-        start_balance=None,
+        start_balance=999,
         tick_freq=1,
         tickers=None,
         name='algo',
         exchange='NYSE'
     ):
         """
-        algo: the string name for the
+        algo: the string name for the algo
         transaction_cost: float that determines the cost of every transaction
         start_balance: the balance that the strategy is starting with
         tick_freq: the number of minutes between each tick. Make sure the algo and backtester tick rates match (idk what will happen if they dont)
@@ -41,11 +37,7 @@ class Strategy:
         )
         self.current_date = None  # datetime object for tracking the date in backtesting
         self.current_time = None  # datetime object for tracking hourly time
-        self.open_close = (
-            None  # a boolean for tracking if it's currently market open/close
-        )
         self.name=name
-        
         self.cal = mcal.get_calendar(exchange)
         ### Parameters for storing statistical data for strategy
         ###
@@ -53,13 +45,66 @@ class Strategy:
         self.tickdata = None  # the data for the given tick
         self.winning_action = 0
         self.total_action = 0
-
         self.win_rate = 0
-
         self.sharpe_ratio = 0
-
         self.prices = None
-
+        self.tickers = \
+        ['CSCO', 'UAL', 'TROW', 'ISRG', 'NVR', 'TPR', 'DVN', 'CE', 'MRO',
+       'BA', 'VRTX', 'GILD', 'EQIX', 'TER', 'MDT', 'V', 'QRVO', 'A',
+       'FOX', 'FLT', 'MO', 'CTRA', 'SWKS', 'ENPH', 'MCHP', 'CDNS', 'MSCI',
+       'CHTR', 'EIX', 'KDP', 'BBY', 'WBA', 'LVS', 'HCA', 'AJG', 'DTE',
+       'C', 'T', 'CF', 'DISH', 'MGM', 'HUM', 'CBOE', 'CFG', 'APH', 'SYY',
+       'MSI', 'FCX', 'ADM', 'OGN', 'LH', 'PKI', 'LNT', 'BAC', 'LNC',
+       'PSX', 'GPN', 'PPG', 'TECH', 'IRM', 'IQV', 'ESS', 'WBD', 'HAL',
+       'STZ', 'DXC', 'PARA', 'ADI', 'F', 'ADBE', 'CPRT', 'TDG', 'TFX',
+       'ULTA', 'ARE', 'SYK', 'CB', 'TSN', 'GNRC', 'PEP', 'PEG', 'NOW',
+       'LLY', 'COST', 'REG', 'NWS', 'LOW', 'MDLZ', 'BKNG', 'ZBRA', 'FMC',
+       'XEL', 'AIZ', 'MET', 'FTV', 'DLR', 'ACGL', 'XRAY', 'FAST', 'TJX',
+       'SNA', 'MPC', 'BR', 'D', 'MRK', 'STX', 'NOC', 'BXP', 'KHC', 'IPG',
+       'UNP', 'ALLE', 'ABBV', 'CDAY', 'ORCL', 'ECL', 'ETR', 'EBAY',
+       'SBUX', 'IR', 'AMT', 'INTU', 'DPZ', 'PAYC', 'CMA', 'PG', 'CAT',
+       'ODFL', 'MCD', 'MNST', 'AMZN', 'INTC', 'PNR', 'GLW', 'BDX', 'KMI',
+       'CSGP', 'PWR', 'APTV', 'BBWI', 'DXCM', 'EXR', 'WELL', 'HOLX',
+       'EXPD', 'GM', 'TXN', 'VRSK', 'SJM', 'TMO', 'OXY', 'RL', 'CCI',
+       'MMM', 'MOS', 'FTNT', 'HSY', 'JNPR', 'DHI', 'ED', 'ES', 'ADSK',
+       'GL', 'INVH', 'IP', 'EXPE', 'KO', 'PCAR', 'WDC', 'LUMN', 'PYPL',
+       'NEE', 'UPS', 'ELV', 'EMR', 'MSFT', 'ANSS', 'CTAS', 'BIO', 'UDR',
+       'CTLT', 'WEC', 'AME', 'IT', 'DD', 'ACN', 'VRSN', 'EW', 'CMG',
+       'AWK', 'COO', 'SHW', 'HPQ', 'AMAT', 'CCL', 'MLM', 'AVY', 'AAP',
+       'ATVI', 'EVRG', 'EA', 'DE', 'SPG', 'AMD', 'KLAC', 'NDAQ', 'URI',
+       'WHR', 'RTX', 'NXPI', 'PNC', 'KMX', 'SEDG', 'WRK', 'MTCH', 'BIIB',
+       'NVDA', 'CHRW', 'ROP', 'IDXX', 'EXC', 'HES', 'HD', 'ALB', 'VLO',
+       'AON', 'ZTS', 'FDX', 'DG', 'TYL', 'HIG', 'CMS', 'CAG', 'INCY',
+       'SCHW', 'HSIC', 'AZO', 'AXP', 'HPE', 'DFS', 'SEE', 'HRL', 'SO',
+       'FRT', 'ZBH', 'FRC', 'CME', 'XOM', 'AMP', 'CVX', 'CMCSA', 'PCG',
+       'PNW', 'ICE', 'BEN', 'UHS', 'BKR', 'EMN', 'SBAC', 'ROK', 'PTC',
+       'NRG', 'NSC', 'NKE', 'FIS', 'FANG', 'VTR', 'MAS', 'RF', 'ETSY',
+       'AMCR', 'TAP', 'MAR', 'XYL', 'CMI', 'MTD', 'KR', 'PLD', 'IBM',
+       'USB', 'BSX', 'LKQ', 'FBHS', 'LIN', 'ITW', 'EOG', 'KMB', 'PEAK',
+       'SPGI', 'NEM', 'WFC', 'CTVA', 'EL', 'GS', 'GD', 'CNP', 'PM', 'RE',
+       'MCO', 'CLX', 'CAH', 'MPWR', 'DGX', 'AVB', 'DIS', 'CBRE', 'GE',
+       'HII', 'LDOS', 'ALL', 'ETN', 'ALGN', 'NFLX', 'SBNY', 'LEN', 'FITB',
+       'WST', 'GWW', 'TRGP', 'NTRS', 'CVS', 'AOS', 'FE', 'ABC', 'JPM',
+       'ABT', 'OMC', 'COF', 'TSCO', 'PH', 'HST', 'JBHT', 'MRNA', 'TSLA',
+       'MOH', 'ATO', 'COP', 'DHR', 'CNC', 'MCK', 'TXT', 'MTB', 'FDS',
+       'VTRS', 'AKAM', 'ROL', 'RMD', 'WRB', 'GOOGL', 'BRO', 'ANET',
+       'PAYX', 'ALK', 'DRI', 'ILMN', 'META', 'AAL', 'MAA', 'MMC', 'FOXA',
+       'POOL', 'CZR', 'FFIV', 'VNO', 'CINF', 'VMC', 'MKTX', 'SRE', 'LHX',
+       'ORLY', 'IVZ', 'RCL', 'PXD', 'SNPS', 'GOOG', 'EPAM', 'SIVB',
+       'NDSN', 'YUM', 'EQT', 'LYV', 'PFE', 'AVGO', 'DUK', 'REGN', 'CL',
+       'VFC', 'VZ', 'JCI', 'AMGN', 'TEL', 'JKHY', 'ADP', 'ON', 'STT',
+       'RSG', 'IFF', 'CARR', 'TRMB', 'QCOM', 'LYB', 'GIS', 'PHM', 'ROST',
+       'LUV', 'LW', 'MS', 'CPB', 'OKE', 'BK', 'J', 'SYF', 'CHD', 'HWM',
+       'MHK', 'TFC', 'DAL', 'APA', 'K', 'AFL', 'CSX', 'NI', 'CPT', 'PFG',
+       'NCLH', 'ZION', 'RJF', 'HBAN', 'UNH', 'PRU', 'GPC', 'WTW', 'FISV',
+       'WMB', 'EQR', 'DVA', 'AIG', 'MA', 'HON', 'VICI', 'O', 'NWSA',
+       'TTWO', 'AES', 'SLB', 'TT', 'TGT', 'AAPL', 'MKC', 'OTIS', 'CEG',
+       'TDY', 'WY', 'APD', 'GRMN', 'AEE', 'HLT', 'DLTR', 'STE', 'HAS',
+       'TMUS', 'WMT', 'NTAP', 'KIM', 'BAX', 'LMT', 'ABMD', 'KEY', 'KEYS',
+       'BMY', 'PSA', 'WYNN', 'RHI', 'EFX', 'NUE', 'PKG', 'WAB', 'CTSH',
+       'SWK', 'CRL', 'MU', 'TRV', 'L', 'AEP', 'CI', 'DOW', 'CDW', 'BALL',
+       'JNJ', 'WM', 'DOV', 'CRM', 'PGR', 'WAT', 'IEX', 'BWA', 'LRCX',
+       'NWL', 'BLK', 'PPL']
         # list of total assets in a given day at open/open
         # index maps to index of self.dates
         self.total_daily_assets_open = []
@@ -72,17 +117,13 @@ class Strategy:
         }  # Dictionary of two lists / [0] -> dates / [1] -> monthly gain loss
 
         # the list of tickers we will be working with
-        self.tickers = ["CSCO","UAL","TROW","ISRG","NVR","TPR","DVN","CE","MRO","BA","VRTX","GILD","EQIX","TER","MDT","V","QRVO","A","FOX","FLT","MO","CTRA","SWKS","ENPH","MCHP","CDNS","MSCI","CHTR","EIX","KDP","BBY","GEN","WBA","LVS","HCA","AJG","DTE","C","T","CF","DISH","MGM","HUM","CBOE","CFG","APH","SYY","MSI","FCX","ADM","OGN","LH","PKI","LNT","BAC","LNC","PSX","GPN","PPG","TECH","IRM","IQV","ESS","WBD","HAL","STZ","DXC","PARA","ADI","F","ADBE","CPRT","TDG","TFX","ULTA","ARE","SYK","CB","TSN","GNRC","PEP","PEG","NOW","LLY","COST","REG","NWS","LOW","MDLZ","BKNG","ZBRA","FMC","XEL","AIZ","MET","FTV","DLR","ACGL","XRAY","FAST","TJX","SNA","MPC","BR","D","MRK","STX","NOC","BXP","KHC","IPG","UNP","ALLE","ABBV","CDAY","ORCL","ECL","ETR","EBAY","SBUX","IR","AMT","INTU","DPZ","PAYC","CMA","PG","CAT","ODFL","MCD","MNST","AMZN","INTC","PNR","GLW","BDX","KMI","CSGP","PWR","APTV","BBWI","DXCM","EXR","WELL","HOLX","EXPD","GM","TXN","VRSK","SJM","TMO","OXY","RL","CCI","MMM","MOS","FTNT","HSY","JNPR","DHI","ED","ES","ADSK","GL","INVH","IP","EXPE","KO","PCAR","WDC","LUMN","PYPL","NEE","UPS","ELV","EMR","MSFT","ANSS","CTAS","BIO","UDR","CTLT","WEC","AME","IT","DD","ACN","VRSN","EW","CMG","AWK","COO","SHW","HPQ","AMAT","CCL","MLM","AVY","AAP","ATVI","EVRG","EA","DE","SPG","AMD","KLAC","NDAQ","URI","WHR","RTX","NXPI","PNC","KMX","SEDG","WRK","MTCH","BIIB","NVDA","CHRW","ROP","IDXX","EXC","HES","HD","ALB","VLO","AON","ZTS","FDX","DG","TYL","HIG","CMS","CAG","INCY","SCHW","HSIC","AZO","AXP","HPE","DFS","SEE","HRL","SO","FRT","ZBH","FRC","CME","XOM","AMP","CVX","CMCSA","PCG","PNW","ICE","BEN","UHS","BKR","EMN","SBAC","ROK","PTC","NRG","NSC","NKE","FIS","FANG","VTR","MAS","RF","ETSY","AMCR","TAP","MAR","XYL","CMI","MTD","KR","PLD","IBM","USB","BSX","LKQ","FBHS","LIN","ITW","EOG","KMB","PEAK","SPGI","NEM","WFC","CTVA","EL","GS","GD","CNP","PM","RE","MCO","CLX","CAH","MPWR","DGX","AVB","DIS","CBRE","GE","HII","LDOS","ALL","ETN","ALGN","NFLX","SBNY","LEN","FITB","WST","GWW","TRGP","NTRS","CVS","AOS","FE","ABC","JPM","ABT","OMC","COF","TSCO","PH","HST","JBHT","MRNA","TSLA","MOH","ATO","COP","DHR","CNC","MCK","TXT","MTB","FDS","VTRS","AKAM","ROL","RMD","WRB","GOOGL","BRO","ANET","PAYX","ALK","DRI","ILMN","META","AAL","MAA","MMC","FOXA","POOL","CZR","FFIV","VNO","CINF","VMC","MKTX","SRE","LHX","ORLY","IVZ","RCL","PXD","SNPS","GOOG","EPAM","SIVB","NDSN","YUM","EQT","LYV","PFE","AVGO","DUK","REGN","CL","VFC","VZ","JCI","AMGN","TEL","JKHY","ADP","ON","STT","RSG","IFF","CARR","TRMB","QCOM","LYB","GIS","PHM","ROST","LUV","LW","MS","CPB","OKE","BK","J","SYF","CHD","HWM","MHK","TFC","DAL","APA","K","AFL","CSX","NI","CPT","PFG","NCLH","ZION","RJF","HBAN","UNH","PRU","GPC","WTW","FISV","WMB","EQR","DVA","AIG","MA","HON","VICI","O","NWSA","TTWO","AES","SLB","TT","TGT","AAPL","MKC","OTIS","CEG","TDY","WY","APD","GRMN","AEE","HLT","DLTR","STE","HAS","TMUS","WMT","NTAP","KIM","BAX","LMT","ABMD","KEY","KEYS","BMY","PSA","WYNN","RHI","EFX","NUE","PKG","WAB","CTSH","SWK","CRL","MU","TRV","L","AEP","CI","DOW","CDW","BALL","JNJ","WM","DOV","CRM","PGR","WAT","IEX","BWA","LRCX","NWL","BLK","PPL"]
-        
-        self.algo = algo.BollingerBandsMultiStock(tickers=self.tickers,
-                                                  MAL=20,
-                                                  bandSD=2,
-                                                  dayConst=390,
-                                                  clearDataLen=10000)
+        self.algo = algo
         
         benchmark_file_path = os.path.abspath(os.getcwd())
-        benchmark_file_path = os.path.join(benchmark_file_path,'backtesting')
         self.benchmark = pd.read_parquet(os.path.join(benchmark_file_path,'US10yrsbond.parquet'))
+
+    def set_algo(self,algo):
+        self.algo = algo
 
     def back_testing(self, start_date="2022-10-19", end_date="2022-11-8"):
         """
@@ -105,7 +146,9 @@ class Strategy:
         import copy; self.date_tracker = copy.deepcopy(self.dates)
         print("\n Started")
         
+        
         while self.current_time < self.end_time:
+            
             if self.is_trading_hour(self.current_time):            
                 if self.current_time.hour == 9 and self.current_time.minute == 30:
                     self.calculate_assets('open')
@@ -133,12 +176,27 @@ class Strategy:
                 except:  # if data cannot be loaded (data for the current date and time does not exist in the current loaded data)
                     break
                 ticker_data_dict = {}
-                if self.tickers == None:
-                    self.tickers = self.data["name"].unique()
                 
                 ticker_data_dict = dict(zip(self.tickers,self.tickdata['open'].astype(float).to_list()))
                 tickOrders = self.algo.update(ticker_data_dict)
+                     
+                tickOrders = list(tickOrders.items())
                         
+                for order in tickOrders:
+                    share = 0 
+                    if order[1] == 'BUY': share = 1
+                    else: share = -1
+                    
+                    # pandas built in loc function is way slower than partitioning the dataset twice
+                    # df = self.data.loc[(self.data['time']==self.current_time) & (self.data['name']==order[0])]
+                    
+                    df = self.data[self.data['time']==self.current_time]
+                    df = df[df['name']==order[0]]                    
+                    if not df.empty:
+                        self.portfolio.place_order(order[0],float(df['close'].iloc[0]), share)
+                    else:
+                        print(f"No price data for {order[0]} at {self.current_time}, skipping this order\n")
+                    del df
                 self.current_time += timedelta(minutes=self.tick_rate)
 
             else: # end of a trading day
@@ -146,20 +204,14 @@ class Strategy:
                 self.current_time = self.next_nearest_trading_date(self.current_time)
                 self.current_date = self.current_time.date()
 
-                
         self.calculate_assets('close')
         self.calculate_daily_gain_loss()
-
-        self.calculate_win_rate()
         self.calculate_sharpe_ratio()
 
         runtime = time.time() - algoStartTime
-        print("\n Finished")
+        print("Finished")
         print("\n Runtime was %s seconds" % runtime)
         self.make_viz()
-        file_path = os.getcwd()
-        file_path = os.path.join('backtesting')
-        file_path = os.path.join(file_path, "backtesting_results")
 
     def log(self, msg, time):
         """
@@ -187,7 +239,6 @@ class Strategy:
 
         # file_path = os.path.abspath(__file__)
         file_path = os.getcwd()
-        file_path = os.path.join(file_path,'backtesting')
         file_path = os.path.join(file_path,'performance')
 
         # try making directory
@@ -222,7 +273,7 @@ class Strategy:
         with open(file_path_log, "w+") as f:
             for i in range(len(transactions)):
                 line = transactions[i]
-                f.write(line[0], line[1], line[2], line[3])
+                f.write(str(line))
                 f.write("\n")
         file_path_stats = os.path.join(file_path,"statistics.txt")
         with open(file_path_stats, "w+") as f:
@@ -234,7 +285,6 @@ class Strategy:
 
     def load_prices(self):
         path = os.getcwd()
-        path = os.path.join(path,'backtesting')
         path = os.path.join(path,'filtered')
         path = os.path.join(path,f'{self.current_time.date().strftime("%Y-%m-%d")}.parquet')
         self.data = pd.read_parquet(path)
@@ -245,14 +295,13 @@ class Strategy:
         holdings = self.portfolio.get_holdings()  # current holdings of the portfolio
         
         for h in holdings:
-
-            # get the price of the holdings at the current date
-            str_time = self.current_time.strftime("%Y-%m-%d %H:%M:%S")
-            partial_data = self.data[self.data["name"] == h[0] and self.data["time"] == str_time]
-            curr_price = float(partial_data[mode])
-
-            # increment the running sum of total by the number of holdings by the current price of holding
-            total_holdings += h[1] * curr_price
+            # str_time = self.current_time.strftime("%Y-%m-%d %H:%M:%S")
+            partial_data = self.data[self.data["name"] == h[0]]
+            partial_data =  self.data[self.data["time"] == self.current_time]
+            if not partial_data.empty:
+                curr_price = float(partial_data['close'])
+                # increment the running sum of total by the number of holdings by the current price of holding
+                total_holdings += h[1] * curr_price
             
         if mode == 'open':
             self.total_daily_assets_open.append(total_holdings + balance)
@@ -260,7 +309,7 @@ class Strategy:
             self.total_daily_assets_close.append(total_holdings + balance)
 
 
-    def calculate_total_assets(self, data_column="open"):
+    def calculate_total_assets(self, data_column="close"):
         """
         calculate the total amount of assets in a portfolio at the selected time each
         day.
@@ -278,8 +327,7 @@ class Strategy:
         for h in holdings:
 
             # get the price of the holdings at the current date
-            str_date = self.current_date.strftime("%Y-%m-%d")
-            partial_data = data[data["Name"] == h[0] and data["date"] == str_date]
+            partial_data = data[data["name"] == h[0] and data["date"] == self.current_time]
             curr_price = float(partial_data[data_column])
 
             # increment the running sum of total by the number of holdings by the current price of holding
@@ -299,6 +347,8 @@ class Strategy:
         self.daily_gain_loss = [0] * len(day_close)
         for i in range(len(self.total_daily_assets_open)):
             self.daily_gain_loss[i] = (day_close[i] - day_open[i]) / day_open[i]
+        
+        
 
     def calculate_monthly_gain_loss(self):
         """
@@ -365,7 +415,7 @@ class Strategy:
 
     def calculate_sharpe_ratio(self):
         # E[Returns - Riskfree Returns]/standard deviation of excess return
-        # Benchmark/RiskReturns S&P
+        # Benchmark/RiskReturns
         if len(self.daily_gain_loss) == 0:
             raise ValueError("Empty data for daily gain/loss")
         
@@ -379,7 +429,7 @@ class Strategy:
 
         return_differentials = [0] * len(self.daily_gain_loss)
         
-        benchmark_data = self.benchmark['Close'].to_list()
+        benchmark_data = self.benchmark['percent_change'].to_list()
         for i in range(len(self.daily_gain_loss)):
             return_differentials[i] = self.daily_gain_loss[i] - benchmark_data[i]
         return_differentials = np.array(return_differentials)
@@ -410,7 +460,6 @@ class Strategy:
         """
         Return the next nearest trading date as a datetime object
         Should only be called by back_testing()
-
         date: datetime object
         """
         self.date_tracker.pop(0)  
@@ -419,12 +468,18 @@ class Strategy:
         return datetime(d.year, d.month, d.day, 9, 30)
 
 import BollingerBandsMultiStock
+import dummy
+
 
 s = Strategy(
-    algo=BollingerBandsMultiStock,
-    transaction_cost=0.01,
+    algo=None,
+    transaction_cost=0.001,
     start_balance=10000,
-    name='BollingerBandsMultiStock'
+    name='test'
 )
+
+
+d = dummy.bollinger_multi(tickers=s.tickers,stdDevs=3,days=3)
+s.set_algo(d)
 
 s.back_testing()
