@@ -1,12 +1,9 @@
-from fastapi import FastAPI, Request
-import os
-import threading
-import signal
 import logging
-import time
-from typing import List
-import uuid
-from .routers import web_socket, backtest
+import os
+
+from fastapi import FastAPI
+
+from .routers import backtest, web_socket
 
 DIR_HOME = os.path.expanduser('~') # To be changed during deployment
 DIR_NUFT = os.path.join(DIR_HOME, '.nuft')
