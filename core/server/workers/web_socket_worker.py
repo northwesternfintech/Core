@@ -1,15 +1,26 @@
 import argparse
 import asyncio
 from typing import List
+import zmq
+import zmq.asyncio
 
-from ..coinbase import ccxtws
+from ...data_acquisition.websocket_consumers.websocket_consumer_factory import WebsocketConsumerFactory
+from ...data_acquisition.ccxt_websocket import CCXTWebSocket
 
 
 class WebSocketWorker:
     """Worker class for running a producer/consumer for
     web sockets.
     """
-    def __init__(self, tickers: List[str]):
+    def __init__(self,
+                 worker_uuid,
+                 exchange: str,
+                 tickers: List[str], 
+                 consumer_name: str,
+                 broker_address: str,
+                 heartbeat_interval: int = 30 * 1000,
+                 heartbeat_liveness = 3,
+                 **kwargs):
         """Creates a worker to run a web socket.
 
         Parameters
@@ -19,49 +30,61 @@ class WebSocketWorker:
         port : _type_
             _description_
         """
+        self._worker_uuid = worker_uuid
         self._tickers = tickers
 
-    async def _consume(self, ws_queue, ml_queues):
-        """Consumes data from queue and pushes it to a broker.
+        # Web socket initialization
+        consumer_factory = WebsocketConsumerFactory()
+        consumer = consumer_factory.get(consumer_name)
+        consumer = consumer(kwargs)
 
-        Parameters
-        ----------
-        queue : asyncio.Queue
-            Queue to consume from.
+        self._web_socket = CCXTWebSocket(exchange, tickers, consumer)
+
+        # Hearbeat initialization
+        self._heartbeat_interval = heartbeat_interval
+        self._heartbeat_liveness = heartbeat_liveness
+
+        context = zmq.asyncio.context()
+        self._broker_socket = context.socket(zmq.DEALER)
+        self._broker_socket.setsockopt(zmq.IDENTITY, b"{self._worker_uuid}")
+        self._poller = zmq.asyncio.Poller()
+        self._poller.register(self._broker_socket, zmq.POLLIN)
+        self._broker_socket.connect(broker_address)
+        self.send(b"READY")
+
+    async def _manage_broker(self):
+        """Polls socket for incoming messages. There are two types of 
+        messages:
+
+        1. Heartbeat: Replies to broker with heartbeat. If too many 
+        heartbeats are missed, assume broker is dead and die.
+        2. Kill: Begins shutdown process and sends acknowledgement 
+        to broker.
         """
-        while True:
-            data = await ws_queue.get()
-            ws_queue.task_done()
-
-            ml_queues[data["ticker"]].put(data)
-
-            # data["time"] = time.time()
-
-            # message = f"{data['ticker']} {json.dumps(data)}".encode('utf-8')
-            # print(message)
-
-    async def check_flag(self, flag):
-        if not flag:
-            return
+        liveness = self._heartbeat_liveness
 
         while True:
-            if flag.is_set():
-                await self._ccxt_ws.exchange.close()
-                for task in self._produce_tasks:
-                    task.cancel()
+            socks = await self._poller.poll(self._heartbeat_interval)
+            socks = dict(socks)
 
-                for task in self._consume_tasks:
-                    task.cancel()
+            if socks.get(self._broker_socket) == zmq.POLLIN:
+                frames = await self._broker_socket.recv_multipart()
 
-                for q in self._ml1_queues.values():
-                    q.put(None)
+                if not frames:
+                    self._cancel()
+                    break
 
-                for q in self._ml2_queues.values():
-                    q.put(None)
+                if len(frames) >= 3 and frames[0] == b"\x02" and frames[2] == b"KILL":
+                    self._shutdown()
+                elif len(frames) == 1 and frames[0] == b"\x01":
+                    liveness = self._heartbeat_liveness
+            else:
+                liveness -= 1
 
-                return
+                if liveness == 0:
+                    self._cancel()
+                    break
 
-            await asyncio.sleep(0.5)
 
     async def _run_async(self, ml1_queues, ml2_queues, flag):
         """

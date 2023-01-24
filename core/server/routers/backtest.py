@@ -1,6 +1,7 @@
-from fastapi import HTTPException, APIRouter, Request
-import uuid
 import logging
+import uuid
+
+from fastapi import APIRouter, HTTPException, Request
 
 logger = logging.getLogger(__name__)
 
