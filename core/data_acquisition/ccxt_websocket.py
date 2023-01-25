@@ -89,10 +89,11 @@ class CCXTWebSocket:
         try:
             await asyncio.gather(*self._tasks)
         except Exception as e:
-            self._close()
+            print("HERE")
+            await self._close()
 
-    def _close(self):
-        self._ccxt_exchange.close()
+    async def _close(self):
+        await self._ccxt_exchange.close()
 
     def shutdown(self):
         for task in self._tasks:

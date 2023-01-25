@@ -36,8 +36,12 @@ class WebsocketConsumer(ABC):
 
         try:
             await asyncio.gather(*tasks)
-        except Exception as _:
+        except asyncio.exceptions.CancelledError:
             self._close()
+            return
+        except Exception as e:
+            self._close()
+            raise e
 
     def _close(self):
         """Handles all resource cleanup for consumer"""

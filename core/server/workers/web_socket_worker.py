@@ -1,130 +1,108 @@
-import argparse
 import asyncio
 from typing import List
-import zmq
-import zmq.asyncio
 
-from ...data_acquisition.websocket_consumers.websocket_consumer_factory import WebsocketConsumerFactory
 from ...data_acquisition.ccxt_websocket import CCXTWebSocket
+from ...data_acquisition.websocket_consumers.zmq_ws_consumer import \
+    ZmqWSConsumer
+from .worker import Worker
+import argparse
 
 
-class WebSocketWorker:
+class WebSocketWorker(Worker):
     """Worker class for running a producer/consumer for
-    web sockets.
+    web sockets
     """
     def __init__(self,
-                 worker_uuid,
                  exchange: str,
-                 tickers: List[str], 
-                 consumer_name: str,
+                 tickers: List[str],
+                 publish_addres: str,
+                 worker_uuid,
                  broker_address: str,
-                 heartbeat_interval: int = 30 * 1000,
-                 heartbeat_liveness = 3,
-                 **kwargs):
-        """Creates a worker to run a web socket.
+                 heartbeat_interval_s: int = 1,
+                 heartbeat_timeout_s: int = 1,
+                 heartbeat_liveness: int = 3,):
+        super().__init__(worker_uuid,
+                         broker_address,
+                         heartbeat_interval_s,
+                         heartbeat_timeout_s,
+                         heartbeat_liveness)
 
-        Parameters
-        ----------
-        address : _type_
-            _description_
-        port : _type_
-            _description_
-        """
-        self._worker_uuid = worker_uuid
-        self._tickers = tickers
+        self._ws_consumer = ZmqWSConsumer(self._context, publish_addres)
+        self._web_socket = CCXTWebSocket(exchange, tickers, self._ws_consumer)
 
-        # Web socket initialization
-        consumer_factory = WebsocketConsumerFactory()
-        consumer = consumer_factory.get(consumer_name)
-        consumer = consumer(kwargs)
+    async def _shutdown(self):
+        await self._web_socket._ccxt_exchange.close()
+        self._ws_consumer._close()
 
-        self._web_socket = CCXTWebSocket(exchange, tickers, consumer)
+        await super()._shutdown()
 
-        # Hearbeat initialization
-        self._heartbeat_interval = heartbeat_interval
-        self._heartbeat_liveness = heartbeat_liveness
+    async def _run_async(self):
+        tasks = super()._get_heartbeat_tasks()
+        tasks.append(asyncio.create_task(self._web_socket._run_async()))
 
-        context = zmq.asyncio.context()
-        self._broker_socket = context.socket(zmq.DEALER)
-        self._broker_socket.setsockopt(zmq.IDENTITY, b"{self._worker_uuid}")
-        self._poller = zmq.asyncio.Poller()
-        self._poller.register(self._broker_socket, zmq.POLLIN)
-        self._broker_socket.connect(broker_address)
-        self.send(b"READY")
+        try:
+            await asyncio.gather(*tasks)
+        except asyncio.exceptions.CancelledError:
+            return
+        except Exception as e:
+            raise e
 
-    async def _manage_broker(self):
-        """Polls socket for incoming messages. There are two types of 
-        messages:
-
-        1. Heartbeat: Replies to broker with heartbeat. If too many 
-        heartbeats are missed, assume broker is dead and die.
-        2. Kill: Begins shutdown process and sends acknowledgement 
-        to broker.
-        """
-        liveness = self._heartbeat_liveness
-
-        while True:
-            socks = await self._poller.poll(self._heartbeat_interval)
-            socks = dict(socks)
-
-            if socks.get(self._broker_socket) == zmq.POLLIN:
-                frames = await self._broker_socket.recv_multipart()
-
-                if not frames:
-                    self._cancel()
-                    break
-
-                if len(frames) >= 3 and frames[0] == b"\x02" and frames[2] == b"KILL":
-                    self._shutdown()
-                elif len(frames) == 1 and frames[0] == b"\x01":
-                    liveness = self._heartbeat_liveness
-            else:
-                liveness -= 1
-
-                if liveness == 0:
-                    self._cancel()
-                    break
-
-
-    async def _run_async(self, ml1_queues, ml2_queues, flag):
-        """
-        Awaits web socket and consumer tasks asynchronously.
-        """
-        self._ml1_queues = ml1_queues
-        self._ml2_queues = ml2_queues
-
-        self._ws_ml1_queue = asyncio.Queue()
-        self._ws_ml2_queue = asyncio.Queue()
-
-        self._ccxt_ws = ccxtws("", self._ws_ml1_queue, 
-                               self._ws_ml2_queue, 
-                               self._tickers)
-
-        self._produce_tasks = [asyncio.create_task(self._ccxt_ws.async_run())]
-        self._flag_task = [asyncio.create_task(self.check_flag(flag))]
-        self._consume_tasks = [
-            asyncio.create_task(self._consume(self._ws_ml1_queue, 
-                                              self._ml1_queues)),
-            asyncio.create_task(self._consume(self._ws_ml2_queue, 
-                                              self._ml2_queues))
-        ]
-
-        await asyncio.gather(*self._produce_tasks)
-
-    def run(self, ml1_queue, ml2_queue, flag=None) -> None:
-        """
-        Wrapper function for starting run_async.
-        """
-        asyncio.run(self._run_async(ml1_queue, ml2_queue, flag))
+    def run(self):
+        asyncio.run(self._run_async())
 
 
 def cli_run():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--exchange", required=True,
+        help="Exchange to pull data from"
+    )
+    parser.add_argument(
         "--tickers", nargs="*", required=True,
         help="Tickers to run in websocket"
     )
+    parser.add_argument(
+        "--publish-address", required=True,
+        help="Address to publish data to"
+    )
+    parser.add_argument(
+        "--worker-uuid", required=True,
+        help="uuid of worker"
+    )
+    parser.add_argument(
+        "--broker-address", required=True,
+        help="Address of broker"
+    )
+    parser.add_argument(
+        "--heartbeat-interval-s", required=False,
+        type=int, default=1,
+        help="Interval to send heartbeat at"
+    )
+    parser.add_argument(
+        "--heartbeat-timeout-s", required=False,
+        type=int, default=1,
+        help="Time to wait for heartbeat"
+    )
+    parser.add_argument(
+        "--heartbeat-liveness", required=False,
+        type=int, default=3,
+        help="Max number of times to timeout before dying"
+    )
     args = parser.parse_args()
 
-    worker = WebSocketWorker(args.tickers)
+    worker = WebSocketWorker(args.exchange,
+                             args.tickers,
+                             args.publish_address,
+                             args.worker_uuid,
+                             args.broker_address,
+                             args.heartbeat_interval_s,
+                             args.heartbeat_timeout_s,
+                             args.heartbeat_liveness)
     worker.run()
+
+
+def main():
+    w = WebSocketWorker(
+         "kraken", ["BTC/USD"], "tcp://localhost:5556", "abc123", "tcp://127.0.0.1:50002"
+    )
+    w.run()

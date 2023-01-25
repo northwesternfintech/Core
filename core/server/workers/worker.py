@@ -1,68 +1,85 @@
-import zmq
-import zmq.asyncio
 import asyncio
 import time
-from core.data_acquisition.ccxt_websocket import CCXTWebSocket
-from typing import List
 
-from core.data_acquisition.websocket_consumers.websocket_consumer_factory import WebsocketConsumerFactory
-from .workers.worker import Worker
+import zmq
+import zmq.asyncio
 
 
-class WebSocketWorker(Worker):
+class Worker:
     """Worker class for running a producer/consumer for
-    web sockets
+    web sockets.
     """
     def __init__(self,
-                 exchange: str,
-                 tickers: List[str], 
-                 publish_addres: str,
-                 worker_uuid,
-                 broker_address: str,
+                 worker_uuid: str,
+                 heartbeat_address: str,
                  heartbeat_interval_s: int = 1,
-                 heartbeat_timeout_s: int = 1, 
-                 heartbeat_liveness: int = 3,):
-        super().__init__(worker_uuid, 
-                         heartbeat_address, 
-                         heartbeat_interval_s, 
-                         heartbeat_timeout_s)
+                 heartbeat_timeout_s: int = 1,
+                 heartbeat_liveness: int = 3):
+        """Worker base class that sends heartbeats to
+        broker and listens for hearbeats from broker.
+
+        Parameters
+        ----------
+        worker_uuid : str
+            uuid identifying worker
+        heartbeat_address : str
+            Address to send heartbeat to. Should include
+            transport protocol (e.g. "tcp://127.0.0.1:5000)
+        heartbeat_interval_s : int, optional
+            Interval (in seconds) to send heartbeat to
+            broker, by default 1
+        heartbeat_timeout_s : int, optional
+            Amount of time to wait for broker heartbeat
+            before declaring timeout, by default 1
+        heartbeat_liveness : int, optional
+            Number of acceptable broker timeouts before 
+            dying, by default 3
+        """
+        self._worker_uuid = worker_uuid
+
+        self._context = zmq.asyncio.Context()
+
+        # Hearbeat initialization
+        self._heartbeat_interval_s = heartbeat_interval_s
+        self._heartbeat_timeout_s = heartbeat_timeout_s
+        self._heartbeat_liveness = heartbeat_liveness
+
+        # Initialize connection with broker
+        self._broker_socket = self._context.socket(zmq.DEALER)
+        self._broker_socket.setsockopt(zmq.IDENTITY, self._worker_uuid.encode())
+        self._poller = zmq.asyncio.Poller()
+        self._poller.register(self._broker_socket, zmq.POLLIN)
+        self._broker_socket.connect(heartbeat_address)
+        self._broker_socket.send(b"\x01")
+
+        self._kill = asyncio.Event()
 
     async def _handle_broker_messages(self):
-        """Polls socket for incoming messages. There are two types of 
+        """Polls socket for incoming messages. There are two types of
         messages:
 
-        1. Heartbeat: Replies to broker with heartbeat. If too many 
+        1. Heartbeat: Replies to broker with heartbeat. If too many
         heartbeats are missed, assume broker is dead and die.
-        2. Kill: Begins shutdown process and sends acknowledgement 
-        to broker.
+        2. Kill: Begins shutdown process.
         """
         liveness = self._heartbeat_liveness
         while not self._kill.is_set():
-            print("starting polling!")
             socks = await self._poller.poll(self._heartbeat_timeout_s * 1000)
             socks = dict(socks)
 
             if socks.get(self._broker_socket) == zmq.POLLIN:
-                print("received message!")
                 frames = await self._broker_socket.recv_multipart()
 
                 if not frames:
-                    print("Received empty frame")
                     self._kill.set()
                     break
 
                 if len(frames) >= 3 and frames[0] == b"\x01" and frames[2] == b"KILL":
-                    print("received die")
                     self._shutdown()
                 elif len(frames) == 1 and frames[0] == b"\x02":
-                    print("received hearbeat")
                     liveness = self._heartbeat_liveness
-                else:
-                    print(frames)
             else:
-                print("received no heartbeat")
                 liveness -= 1
-                print(f"{liveness} lives left")
 
                 if liveness == 0:
                     self._kill.set()
@@ -71,17 +88,18 @@ class WebSocketWorker(Worker):
         await self._shutdown()
 
     async def _send_heartbeat(self):
-        self._broker_socket.send(b"\x01")
+        """Periodically sends heartbeats to broker"""
+        self._broker_socket.send(b"\x02")
         heartbeat_at = time.time() + self._heartbeat_interval_s
 
         while not self._kill.is_set():
             if time.time() > heartbeat_at:
-                print("Sent heartbeat!")
                 self._broker_socket.send(b"\x02")
                 heartbeat_at = time.time() + self._heartbeat_interval_s
             await asyncio.sleep(5e-2)
 
     def _shutdown(self):
+        """Closes connections with broker and stops tasks"""
         self._broker_socket.setsockopt(zmq.LINGER, 0)
         self._broker_socket.close()
 
@@ -90,8 +108,6 @@ class WebSocketWorker(Worker):
         ws_socket.close()
 
         self._context.term()
-
-        self._web_socket._close()
 
         for task in self._tasks:
             task.cancel()
@@ -109,21 +125,14 @@ class WebSocketWorker(Worker):
         """
         Awaits web socket and consumer tasks asynchronously.
         """
-        self._kill = asyncio.Event()
-
         tasks = self._get_heartbeat_tasks()
 
         try:
             await asyncio.gather(*tasks)
-        except Exception as _:
+        except asyncio.exceptions.CancelledError:
             return
+        except Exception as e:
+            raise e
 
     def run(self):
         asyncio.run(self._run_async())
-
-
-def main():
-    w = WebSocketWorker(
-        "abc123", "kraken", ["BTC/USD"], "tcp://localhost:5556", "tcp://127.0.0.1:50002"
-    )
-    w.run()
