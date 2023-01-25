@@ -20,8 +20,12 @@ class Worker(object):
 class WorkerQueue(object):
     def __init__(self):
         self.queue = OrderedDict()
+        self.register_count = 0
 
     def ready(self, worker):
+        if worker.address not in self.queue:
+            self.register_count+= 1
+            print(self.register_count)
         self.queue.pop(worker.address, None)
         self.queue[worker.address] = worker
 
