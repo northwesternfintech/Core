@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 from typing import List
 
@@ -5,7 +6,6 @@ from ...data_acquisition.ccxt_websocket import CCXTWebSocket
 from ...data_acquisition.websocket_consumers.zmq_ws_consumer import \
     ZmqWSConsumer
 from .worker import Worker
-import argparse
 
 
 class WebSocketWorker(Worker):
@@ -34,7 +34,7 @@ class WebSocketWorker(Worker):
         await self._web_socket._ccxt_exchange.close()
         self._ws_consumer._close()
 
-        await super()._shutdown()
+        super()._shutdown()
 
     async def _run_async(self):
         tasks = super()._get_heartbeat_tasks()

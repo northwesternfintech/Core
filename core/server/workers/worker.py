@@ -4,6 +4,8 @@ import time
 import zmq
 import zmq.asyncio
 
+from .. import protocol
+
 
 class Worker:
     """Worker class for running a producer/consumer for
@@ -13,7 +15,7 @@ class Worker:
                  worker_uuid: str,
                  heartbeat_address: str,
                  heartbeat_interval_s: int = 1,
-                 heartbeat_timeout_s: int = 1,
+                 heartbeat_timeout_s: int = 3,
                  heartbeat_liveness: int = 3):
         """Worker base class that sends heartbeats to
         broker and listens for hearbeats from broker.
@@ -50,7 +52,7 @@ class Worker:
         self._poller = zmq.asyncio.Poller()
         self._poller.register(self._broker_socket, zmq.POLLIN)
         self._broker_socket.connect(heartbeat_address)
-        self._broker_socket.send(b"\x01")
+        self._broker_socket.send(protocol.READY)
 
         self._kill = asyncio.Event()
 
@@ -74,14 +76,16 @@ class Worker:
                     self._kill.set()
                     break
 
-                if len(frames) >= 3 and frames[0] == b"\x01" and frames[2] == b"KILL":
+                if len(frames) == 1 and frames[0] == protocol.DIE:
                     self._shutdown()
-                elif len(frames) == 1 and frames[0] == b"\x02":
+                elif len(frames) == 1 and frames[0] == protocol.HEARTBEAT:
                     liveness = self._heartbeat_liveness
             else:
+                print("MISSED HEARTBEAT")
                 liveness -= 1
 
                 if liveness == 0:
+                    print("DYING")
                     self._kill.set()
                     break
 
@@ -89,23 +93,18 @@ class Worker:
 
     async def _send_heartbeat(self):
         """Periodically sends heartbeats to broker"""
-        self._broker_socket.send(b"\x02")
         heartbeat_at = time.time() + self._heartbeat_interval_s
 
         while not self._kill.is_set():
             if time.time() > heartbeat_at:
-                self._broker_socket.send(b"\x02")
+                self._broker_socket.send(protocol.HEARTBEAT)
                 heartbeat_at = time.time() + self._heartbeat_interval_s
             await asyncio.sleep(5e-2)
 
-    def _shutdown(self):
+    async def _shutdown(self):
         """Closes connections with broker and stops tasks"""
         self._broker_socket.setsockopt(zmq.LINGER, 0)
         self._broker_socket.close()
-
-        ws_socket = self._web_socket._ws_consumer._pub_socket
-        ws_socket.setsockopt(zmq.LINGER, 0)
-        ws_socket.close()
 
         self._context.term()
 
@@ -116,7 +115,6 @@ class Worker:
         self._tasks = [
             asyncio.create_task(self._handle_broker_messages()),
             asyncio.create_task(self._send_heartbeat()),
-            asyncio.create_task(self._web_socket._run_async())
         ]
 
         return self._tasks
@@ -136,3 +134,12 @@ class Worker:
 
     def run(self):
         asyncio.run(self._run_async())
+
+
+def main():
+    import uuid
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor() as executor:
+        for i in range(10):
+            executor.submit(Worker(str(uuid.uuid4()), "tcp://localhost:5556").run)

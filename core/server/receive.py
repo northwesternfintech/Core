@@ -89,19 +89,22 @@ INTERVAL_MAX = 32
 PPP_READY = b"\x01"      # Signals worker is ready
 PPP_HEARTBEAT = b"\x02"  # Signals worker heartbeat
 
-def worker_socket(context, poller):
+def worker_socket(context, poller, address, i=None):
     """Helper function that returns a new configured socket
        connected to the Paranoid Pirate queue"""
     worker = context.socket(zmq.DEALER) # DEALER
-    identity = b"%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
+    # identity = b"%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
+    identity = b"manager" if i == "manager" else b"%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
     worker.setsockopt(zmq.IDENTITY, identity)
     poller.register(worker, zmq.POLLIN)
-    worker.connect("tcp://localhost:5556")
-    worker.send(PPP_READY)
+    worker.connect(address)
+
+    if identity != b"manager":
+        worker.send(PPP_READY)
     return worker
 
 
-def run_worker(context):
+def run_worker(context, address, i=None, should_fail=False):
     poller = zmq.Poller()
 
     liveness = HEARTBEAT_LIVENESS
@@ -109,7 +112,7 @@ def run_worker(context):
 
     heartbeat_at = time.time() + HEARTBEAT_INTERVAL
 
-    worker = worker_socket(context, poller)
+    worker = worker_socket(context, poller, address, i)
     cycles = 0
     while True:
         socks = dict(poller.poll(HEARTBEAT_INTERVAL * 1000))
@@ -124,18 +127,19 @@ def run_worker(context):
                 break # Interrupted
 
             if len(frames) == 1 and frames[0] == PPP_HEARTBEAT:
-                # print("I: Queue heartbeat")
+                print(f"{address}: Queue heartbeat")
                 liveness = HEARTBEAT_LIVENESS
 
                 # Simulate various problems, after a few cycles
                 cycles += 1
-                if cycles > 3 and randint(0, 4) == 0:
-                    print("I: Simulating a crash")
-                    break
-                if cycles > 3 and randint(0, 4) == 0:
-                    # print("I: Simulating CPU overload")
-                    time.sleep(3)
-                # print("I: Normal reply")
+                if should_fail:
+                    if cycles > 3 and randint(0, 5) == 0:
+                        print(f"{address}: Simulating a crash")
+                        break
+                    if cycles > 3 and randint(0, 5) == 0:
+                        print(f"{address}: Simulating CPU overload")
+                        time.sleep(3)
+                print(f"{address}: Normal reply")
                 worker.send_multipart(frames)
                 liveness = HEARTBEAT_LIVENESS
                 time.sleep(1)  # Do some heavy work
@@ -145,8 +149,8 @@ def run_worker(context):
         else:
             liveness -= 1
             if liveness == 0:
-                print("W: Heartbeat failure, can't reach queue")
-                print("W: Reconnecting in %0.2fs..." % interval)
+                print(f"{address}: Heartbeat failure, can't reach queue")
+                print(f"{address}: Reconnecting in %0.2fs..." % interval)
                 time.sleep(interval)
 
                 if interval < INTERVAL_MAX:
@@ -154,11 +158,11 @@ def run_worker(context):
                 poller.unregister(worker)
                 worker.setsockopt(zmq.LINGER, 0)
                 worker.close()
-                worker = worker_socket(context, poller)
+                worker = worker_socket(context, poller, address, i)
                 liveness = HEARTBEAT_LIVENESS
         if time.time() > heartbeat_at:
             heartbeat_at = time.time() + HEARTBEAT_INTERVAL
-            # print("I: Worker heartbeat")
+            print(f"{address}: Worker heartbeat")
             worker.send(PPP_HEARTBEAT)
 
 
@@ -168,8 +172,10 @@ def main():
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor() as executor:
-        for i in range(1000):
-            executor.submit(run_worker, context)
+        executor.submit(run_worker, context, "tcp://localhost:5557", i="manager", should_fail=True)
+        executor.submit(run_worker, context, "tcp://localhost:5556", should_fail=False)
+        # for i in range(1000):
+        #     executor.submit(run_worker, context)
 
 
 

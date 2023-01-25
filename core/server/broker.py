@@ -1,20 +1,17 @@
+import asyncio
+import time
+from collections import OrderedDict
+from typing import Dict, Set
+
 import zmq
 import zmq.asyncio
-
-from collections import OrderedDict
-import time
-
-import zmq
-
-import asyncio
-from typing import Set, Dict
 
 from .protocol import HEARTBEAT, READY
 
 
 class Broker:
     def __init__(self,
-                #  manager_address,
+                 manager_address,
                 #  frontend_address,
                  backend_address,
                 #  publish_address,
@@ -25,16 +22,18 @@ class Broker:
         self._heartbeat_interval_s = heartbeat_interval_s
         self._heartbeat_timeout_s = heartbeat_timeout_s
         self._heartbeat_liveness = heartbeat_liveness
+        self._manager_liveness = heartbeat_liveness
 
         self._kill = asyncio.Event()
 
         self._context = zmq.asyncio.Context()
 
         # self._mgr_request_socket = self._context.socket(zmq.REQ)
-        # self._mgr_hearbeat_socket = self._context.socket(zmq.ROUTER)
+        self._mgr_hearbeat_socket = self._context.socket(zmq.ROUTER)
+        self._mgr_hearbeat_socket.bind(manager_address)
 
-        # self._mgr_heartbeat_poller = zmq.asyncio.Poller()
-        # self._mgr_heartbeat_poller.register(self._mgr_hearbeat_socket, zmq.POLLIN)
+        self._mgr_heartbeat_poller = zmq.asyncio.Poller()
+        self._mgr_heartbeat_poller.register(self._mgr_hearbeat_socket, zmq.POLLIN)
 
         # self._frontend_socket = self._context.socket(zmq.ROUTER)
         # self._frontend_socket.bind(frontend_address)
@@ -53,8 +52,6 @@ class Broker:
         self._worker_liveness: Dict[str, int] = {}
         self._worker_last_seen: Dict[str, int] = {}
 
-        # self._manager_liveness = heartbeat_liveness
-
     async def _send_heartbeat(self):
         """Periodically sends heartbeats to workers"""
         heartbeat_at = time.time() + self._heartbeat_interval_s
@@ -62,50 +59,51 @@ class Broker:
         while not self._kill.is_set():
             if time.time() > heartbeat_at:
                 for worker in self._workers:
-                    # print(f"Sent hearbeat to {worker}")
                     msg = [worker, HEARTBEAT]
                     self._backend_socket.send_multipart(msg)
 
                 heartbeat_at = time.time() + self._heartbeat_interval_s
             await asyncio.sleep(5e-2)
 
-    # async def _handle_manager_heartbeat(self):
-    #     """Periodically sends heatbeats to manager and waits for 
-    #     heartbeats from manager. Manager is critical, so interchange
-    #     dies if manager is unresponsive.
-    #     """
-    #     heartbeat_at = time.time() + self._heartbeat_interval_s
-    #     while True:
-    #         socks = await self._mgr_heartbeat_poller(self._heartbeat_interval_s * 1000)
-    #         socks = dict(socks)
+    async def _handle_manager_heartbeat(self):
+        """Periodically sends heatbeats to manager and waits for
+        heartbeats from manager. Manager is critical, so interchange
+        dies if manager is unresponsive.
+        """
+        heartbeat_at = time.time() + self._heartbeat_interval_s
+        while True:
+            socks = await self._mgr_heartbeat_poller.poll(self._heartbeat_timeout_s * 1000)
+            socks = dict(socks)
 
-    #         if socks.get(self._mgr_hearbeat_socket) == zmq.POLLIN:
-    #             frames = self._mgr_hearbeat_socket
+            if socks.get(self._mgr_hearbeat_socket) == zmq.POLLIN:
+                frames = await self._mgr_hearbeat_socket.recv_multipart()
 
-    #             msg = frames[1:]
+                msg = frames[1:]
 
-    #             if len(msg) == 1 and msg[0] == HEARTBEAT:
-    #                 self._manager_liveness = self._heartbeat_liveness
-    #             else:
-    #                 self._kill.set()
-    #                 break
+                if len(msg) == 1 and msg[0] == HEARTBEAT:
+                    print("Receved manager heartbeat")
+                    self._manager_liveness = self._heartbeat_liveness
+                else:
+                    self._kill.set()
+                    break
 
-    #         else:
-    #             self._manager_liveness -= 1
+            else:
+                print("Missed manager heartbeat")
+                self._manager_liveness -= 1
 
-    #             if self._manager_liveness == 0:
-    #                 self._kill.set()
-    #                 break
+                if self._manager_liveness == 0:
+                    self._kill.set()
+                    break
 
-    #         if time.time() >= heartbeat_at:
-    #             msg = [b"manager", HEARTBEAT]
-    #             self._mgr_hearbeat_socket.send_multipart(msg)
+            if time.time() >= heartbeat_at:
+                msg = [b"manager", HEARTBEAT]
+                self._mgr_hearbeat_socket.send_multipart(msg)
 
     async def _handle_backend(self):
         """Handles messages from workers"""
-        num_registered = 0
         while not self._kill.is_set():
-            socks = await self._backend_poller.poll(self._heartbeat_interval_s * 1000)
+            print("HERE")
+            socks = await self._backend_poller.poll(self._heartbeat_timeout_s * 1000)
             socks = dict(socks)
 
             if socks.get(self._backend_socket) == zmq.POLLIN:
@@ -120,12 +118,12 @@ class Broker:
                         self._worker_liveness[address] = self._heartbeat_liveness
                         self._worker_last_seen[address] = time.time()
                         print(f"Registered {address}")
-                        num_registered+=1
-                        print(num_registered)
                         # Send message to manager to start process, await response
                     elif msg[0] == HEARTBEAT:
                         # print(f"Received heartbeat from {address} at {time.time()}")
                         self._worker_last_seen[address] = time.time()
+            else:
+                print("NO MESSAGE")
 
             killed_workers = []
             for worker in self._workers:
@@ -161,6 +159,7 @@ class Broker:
         self._tasks = [
             asyncio.create_task(self._send_heartbeat()),
             asyncio.create_task(self._handle_backend()),
+            asyncio.create_task(self._handle_manager_heartbeat())
 
         ]
 
@@ -171,8 +170,5 @@ class Broker:
 
 
 def main():
-    w = Broker("tcp://*:5556")
+    w = Broker("tcp://*:5557", "tcp://*:5556")
     w.run()
-    
-                        
-
