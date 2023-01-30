@@ -4,9 +4,14 @@ import os
 import time
 from concurrent.futures import ProcessPoolExecutor
 from typing import Optional
+import asyncio
+import zmq
+import zmq.asyncio
+from .. import protocol
+import json
 
 from .process_managers.backtest_manager import BacktestManager
-from .process_managers.web_socket_manager import WebSocketManager
+from .web_socket_manager import WebSocketManager
 
 logger = logging.getLogger(__name__)
 
@@ -14,44 +19,120 @@ __all__ = ('Manager',)
 
 
 class Manager:
-    """Manages the startup/operation/teardown of other core services
-    and facilitates the flow of data.
-    """
+    # Manager sends heartbeats to interchange and also receives tasks from frontend from interchange to handle
+    """Manages the startup and status/state of worker processes"""
     def __init__(self,
-                 path: Optional[str] = None):
-        """Creates a new Manger and allocates resources for the manager to use
-        (process pool, queues, etc.). It is the responsibility of the user to
-        deallocate these resources using the .shutdown() method.
-        Parameters
-        ----------
-        path : Optional[str], optional
-            Absolute path to the nuft folder on this machine. If unspecified
-            the path ~/.nuft will be used.
-        """
-        if path is None:
-            path = os.path.join(os.environ['HOME'], '.nuft')
+                 broker_address,
+                 worker_address,
+                 redis_address,
+                 redis_password,
+                 num_threads=5,
+                 max_processes=multiprocessing.cpu_count() - 2,
+                 heartbeat_interval_s: int = 1,
+                 heartbeat_timeout_s: int = 3,
+                 heartbeat_liveness: int = 3,):
+        self._num_threads = num_threads
+        self._broker_address = heartbeat_address
+        self._broker_socket = broker_address
+        
+        self._redis_address = redis_address
+        self._redis_password = redis_password
 
-        self._path = path
+        self._max_processes = max_processes
 
-        self._max_cores = multiprocessing.cpu_count()
-        self._cur_process_count = 0
+        self._heartbeat_interval_s = heartbeat_interval_s
+        self._heartbeat_timeout_s = heartbeat_timeout_s
+        self._heartbeat_liveness = heartbeat_liveness
 
-        self._executor = ProcessPoolExecutor(self._max_cores)
-        self._mp_manager = multiprocessing.Manager()
+        # Initialize socket connections
+        self._context = zmq.asyncio.Context()
+
+        self._broker_socket = self._context.socket(zmq.DEALER)
+        self._broker_poller = zmq.asyncio.Poller()
+        self._broker_poller.register(self._broker_socket, zmq.POLLIN)
+
+        self._worker_socket = self._context.socket(zmq.DEALER)
 
         self._web_socket_manager = WebSocketManager(self)
         self._backtest_manager = BacktestManager(self)
+
+        self._kill = asyncio.Event()
+
+    def validate_message(self, frames, service_type):
+        if not frames:
+            return
+
+        address = frames[0]
+        if len(frames) < 4:
+            msg = [address, protocol.ERROR, b"Message too short"]
+            self._backend_socket.send_multipart(msg)
+            return
+
+        service_type = frames[1].decode()
+        command = frames[2].decode()
+        params = frames[3].decode()
+
+        if frames[1] != service_type:
+            msg = [address, protocol.ERROR, b"Invalid service"]
+            self._backend_socket.send_multipart(msg)
+            return
+
+        try:
+            params = json.load(params)
+        except:
+            msg = [address, protocol.ERROR, b"Failed to load params"]
+            self._backend_socket.sent_multipart(msg)
+            return
+
+        return address, command, params
+
+    async def _handle_worker_socket(self):
+        """Listens for status updates from workers and updates status on redis.
+        """
+        while not self._kill.is_set():
+            frames = await self._worker_socket.recv_multipart()
+
+            if not frames:
+                continue
+
+            address = frames[0]
+
+    async def _consume_messages(self):
+        while not self._kill.is_set():
+            frames = await self._backend_socket.recv_multipart()
+
+            if not frames:
+                continue
+
+            address = frames[0]
+            
+            # Invalid message
+            if len(frames) < 2:
+                msg = [address, protocol.ERROR, b"Message too short"]
+                self._backend_socket.send_multipart(msg)
+
+            service_type = frames[1]
+            match service_type:
+                case b"websocket":
+                    await self.web_sockets._consume_message(frames)
+                    break
+                case b"backtest":
+                    await self.backtest._consume_message(frames)
+                    break
+                case _:
+                    msg = [address, protocol.ERROR, b"Invalid service"]
+                    self._backend_socket.send_multipart(msg)
+
+    def _async_run(self):
+        self._tasks = [self._consume_messages() for _ in range(self._num_threads)]
+
+        asyncio.gather(*self._tasks)
 
     def shutdown(self):
         """Deallocates all necessary resources. No manager operations
         should be done after calling this function."""
         self.web_sockets.shutdown()
-        logger.error("Shutting down backtest")
         self.backtest.shutdown()
-
-        time.sleep(1)
-
-        self._executor.shutdown()
 
     @property
     def web_sockets(self) -> WebSocketManager:
@@ -62,6 +143,9 @@ class Manager:
     def backtest(self) -> BacktestManager:
         """Provides access to backtest"""
         return self._backtest_manager
+
+    
+        
 
 
 def main():
