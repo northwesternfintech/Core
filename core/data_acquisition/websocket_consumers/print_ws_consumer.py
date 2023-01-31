@@ -11,5 +11,5 @@ class PrintWSConsumer(WebsocketConsumer):
             print(data)
             data_queue.task_done()
 
-    def _close(self):
+    async def _close(self):
         pass

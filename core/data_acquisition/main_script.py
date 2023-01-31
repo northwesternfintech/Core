@@ -36,7 +36,7 @@ async def async_main(exchanges, coins):  # TODO: Don't think this needs to be as
             # Initializing web sockets as the program traverses through the try except
             # layer to avoid unnecessarily initializing websockets
             # ws = ccxtws('ccxt.' + exchanges[0] + '()', q, r, coins)
-            ws = CCXTWebSocket("", q, r, coins=["ETH/USD", "BTC/USD"])
+            ws = CCXTWebSocket("", q, r, tickers=["ETH/USD", "BTC/USD"])
             future = executor.submit(ws.activate)
             while True:
                 print(future)

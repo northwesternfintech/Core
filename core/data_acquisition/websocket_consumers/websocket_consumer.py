@@ -37,8 +37,8 @@ class WebsocketConsumer(ABC):
         try:
             await asyncio.gather(*tasks)
         except Exception as _:
-            self._close()
+            await self._close()
 
-    def _close(self):
+    async def _close(self):
         """Handles all resource cleanup for consumer"""
         raise NotImplementedError
