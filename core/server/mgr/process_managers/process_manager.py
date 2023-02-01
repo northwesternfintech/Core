@@ -4,8 +4,8 @@ import multiprocessing
 import subprocess
 from abc import ABC
 from typing import Dict, List, Set, Union
-
-from ..workers.status import WorkerStatus
+from ... import protocol
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -24,155 +24,53 @@ class ProcessManager(ABC):
     self._uuid_future : Dict[str, concurrent.futures.Future]
         Map of uuids to futures of running process
     """
-    def __init__(self,
-                 manager: 'Manager'):
-        """Creates a new process manager. Freeing resources is the
-        responsibility of the Manager class.
-
-        Parameters
-        ----------
-        manager : Manager
-            Instance of parent Manager
-        """
+    def __init__(self, manager):
         self._manager = manager
+        self._redis_conn = self._manager._redis_conn
+        self._broker_socket = self._manager._broker_socket
+        self._worker_socket = self._manager._worker_socket
 
-        self._running_uuids: Set[str] = set()
+    def _validate_client_message(self, frames):
+        if not frames:
+            return
 
-        self._uuid_status: Dict[str, WorkerStatus] = {}
-        self._uuid_flag: Dict[str, subprocess.Popen] = {}
-        self._uuid_future: Dict[str, concurrent.futures.Future] = {}
+        client_address = frames[0]
+        if len(frames) < 4:
+            msg = [client_address, protocol.ERROR, b"Message too short"]
+            self._broker_socket.send_multipart(msg)
+            return
 
-    async def start(self) -> int:
-        raise NotImplementedError
+        service_type = frames[1].decode()
+        command = frames[2].decode()
+        params = frames[3].decode()
 
-    def _add_process(self, uuid: str, flag: multiprocessing.Event, 
-                     future: concurrent.futures.Future) -> None:
-        """Tracks new process in class variables.
+        if frames[1] != service_type:
+            msg = [client_address, protocol.ERROR, b"Invalid service"]
+            self._broker_socket.send_multipart(msg)
+            return
 
-        Parameters
-        ----------
-        uuid : str
-            uuid of new process to track.
-        process : multiprocessing.Event
-            Event to set to cancel task
-        """
-        self._manager._cur_process_count += 1
-        logger.error(f"Added uuid {uuid}")
-        self._running_uuids.add(uuid)
+        if params:
+            try:
+                params = json.load(params)
+            except:
+                msg = [client_address, protocol.ERROR, b"Failed to load params"]
+                self._broker_socket.sent_multipart(msg)
+                return
 
-        self._uuid_status[uuid] = WorkerStatus.WORKING
-        self._uuid_flag[uuid] = flag
-        self._uuid_future[uuid] = future
+        return client_address, service_type, command, params
 
-    def stop(self, uuid: str) -> None:
-        """Takes a uuid of process and terminates it.
+    async def _fetch_redis_entry(self, client_address, **params):
+        if "uuid" not in params:
+            msg = [client_address, b"Missing param 'uuid'"]
+            await self._broker_socket.send_multipart(msg)
+            return
+        
+        worker_address = params["uuid"]
+        if not (await self._redis_conn.find(worker_address)):
+            msg = [client_address, f"Unknown uuid {worker_address}".encode()]
+            await self._broker_socket.send_multipart(msg)
+            return
 
-        Parameters
-        ----------
-        uuid : str
-            uuid of process to stop
-
-        Raises
-        ------
-        ValueError
-            Raises ValueError if invalid uuid or uuid is not running
-        """
-        if uuid not in self._running_uuids:
-            raise ValueError(f"{uuid} is invalid or not running")
-
-        flag = self._uuid_flag[uuid]
-        flag.set()
-        self._remove_process(uuid)
-
-    def _remove_process(self, uuid: int) -> None:
-        """Removes process from class variables.
-
-        Parameters
-        ----------
-        uuid : int
-            uuid of new process to remove.
-
-        Raises
-        ______
-        ValueError
-            Raises ValueError if invalid uuid or uuid is not running
-        """
-        self._manager._cur_process_count -= 1
-        self._running_uuids.remove(uuid)
-        self._uuid_status[uuid] = WorkerStatus.STOPPED
-        self._uuid_flag.pop(uuid)
-        self._uuid_future.pop(uuid)
-
-    def status(self, uuid: int) -> Dict[str, Union[List[str], str]]:
-        """Takes uuid of process and returns the operational status.
-
-        Parameters
-        ----------
-        uuid : int
-            uuid of web socket to get status of
-
-        Returns
-        -------
-        status_dict : Dict[int, Dict[str, Union[List[str], str]]]
-            Dictionary containing "status" of uuid.
-
-        Raises
-        ------
-        ValueError
-            Raises ValueError if unknown uuid
-        """
-        if uuid not in self._uuid_status:
-            raise ValueError(f"Unknown uuid {uuid}")
-
-        self._update_status()
-
-        status_dict = {}
-        status_dict['status'] = str(self._uuid_status[uuid].value)
-
-        return status_dict
-
-    def status_all(self) -> Dict[int, Dict[str, Union[List[str], str]]]:
-        """Returns status of all active uuids.
-
-        Returns
-        -------
-        uuid_statuses : Dict[int, Dict[str, Union[List[str], str]]]
-            Dictionary mapping uuids to dictionary containing values
-            returned by .status.
-        """
-        uuid_statuses = {}
-
-        for uuid in self._uuid_status:
-            uuid_statuses[uuid] = self.status(uuid)
-
-        return uuid_statuses
-
-    def clear_status(self):
-        """Removes all STOPPED or FAILED websockets"""
-        uuid_to_clear = []
-        for uuid, status in self._uuid_status.items():
-            if status in [WorkerStatus.STOPPED, WorkerStatus.FAILED]:
-                uuid_to_clear.append(uuid)
-
-        for uuid in uuid_to_clear:
-            self._uuid_status.pop(uuid)
-
-    def _update_status(self):
-        """
-        Checks whether running processes are still operational
-        """
-        failed_uuids = []
-        for uuid in self._running_uuids:
-            future = self._uuid_future[uuid]
-            if future.done() and future.exception():
-                failed_uuids.append(uuid)
-
-        for uuid in failed_uuids:
-            self._remove_process(uuid)
-
-    def shutdown(self):
-        """Stops all running web sockets. Object should not
-        be used again after calling this method"""
-        for uuid in self._running_uuids.copy():
-            logger.error(f"Stopping {uuid}")
-            self.stop(uuid)
+        entry = await self._redis_conn.get(worker_address)
+        entry = json.loads(entry)
+        return entry

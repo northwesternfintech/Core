@@ -172,10 +172,10 @@ def main():
     from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor() as executor:
-        executor.submit(run_worker, context, "tcp://localhost:5557", i="manager", should_fail=True)
-        executor.submit(run_worker, context, "tcp://localhost:5556", should_fail=False)
+        executor.submit(run_worker, context, "tcp://localhost:5557", i="manager", should_fail=False)
+        executor.submit(run_worker, context, "tcp://localhost:5556", should_fail=True)
         # for i in range(1000):
-        #     executor.submit(run_worker, context)
+        #     executor.submit(run_worker, context, "tcp://localhost:5556", should_fail=True)
 
 
 
