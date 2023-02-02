@@ -20,8 +20,8 @@ class Broker:
                  heartbeat_interval_s: int = 1,
                  heartbeat_timeout_s: int = 3,
                  heartbeat_liveness: int = 3,):
-        self._broker_uuid = broker_uuid
-        
+        # self._broker_uuid = broker_uuid
+        self._broker_uuid = b"broker"
         self._heartbeat_interval_s = heartbeat_interval_s
         self._heartbeat_timeout_s = heartbeat_timeout_s
         self._heartbeat_liveness = heartbeat_liveness
@@ -34,6 +34,10 @@ class Broker:
 
         self._mgr_fe = self._context.socket(zmq.ROUTER)
         self._mgr_fe.bind(manager_address)
+
+        self._fe_poller = zmq.asyncio.Poller()
+        self._fe_poller.register(self._client_fe, zmq.POLLIN)
+        self._fe_poller.register(self._mgr_fe, zmq.POLLIN)
 
         self._mgr_fe_poller = zmq.asyncio.Poller()
         self._mgr_fe_poller.register(self._mgr_fe, zmq.POLLIN)
@@ -52,7 +56,12 @@ class Broker:
         self._kill = asyncio.Event()
 
     async def _start_manager(self):
-        self._manager_uuid = f"manager_{uuid.uuid4()}".encode()
+        # self._manager_uuid = f"manager_{uuid.uuid4()}".encode()
+        self._manager_uuid = b"manager"
+        f = await self._mgr_fe.recv_multipart()
+        print(f)
+        print("____")
+        return
 
         # Start manager using subprocess
         mgr_startup_poller = zmq.Poller()
@@ -90,8 +99,37 @@ class Broker:
     async def _manage_client_fe(self):
         """Forwards messages from client facing front end to manager"""
         while True:
-            frames = await self._client_fe.recv_multipart()
-            await self._mgr_fe.send_multipart(frames)
+            socks = await self._fe_poller.poll()
+            socks = dict(socks)
+
+            if socks.get(self._client_fe) == zmq.POLLIN:
+                frames = await self._client_fe.recv_multipart()
+                print(f"RECEIVED FROM CLIENT: {frames}")
+                client_address = frames[0]
+                client_msg = frames[2:]
+
+                msg = [self._manager_uuid, client_address] + client_msg
+                await self._mgr_fe.send_multipart(msg)
+
+            if socks.get(self._mgr_fe) == zmq.POLLIN:
+                frames = await self._mgr_fe.recv_multipart()
+                print(f"RECEIVED FROM MANAGER: {frames}")
+                client_address = frames[2]
+                msg_content = frames[2:]
+                msg = [client_address, b''] + msg_content
+                print(f"Sending to client: {msg}")
+                await self._client_fe.send_multipart(msg)
+
+    async def _manage_client_be(self):
+        """Forwards messages from manager to client"""
+        while True:
+            frames = await self._mgr_fe.recv_multipart()
+            print(f"RECEIVED FROM MANAGER: {frames}")
+            client_address = frames[2]
+            msg_content = frames[2:]
+            msg = [client_address, b''] + msg_content
+            print(f"Sending to client: {msg}")
+            await self._client_fe.send_multipart(msg)
 
     async def _manage_mgr_fe(self):
         """Handles the following tasks:
@@ -129,8 +167,8 @@ class Broker:
                     # Forward message to client
                     await self._client_fe.send_multipart(msg)
             else:
-                print("Missed manager heartbeat")
-                self._manager_liveness -= 1
+                # print("Missed manager heartbeat")
+                # self._manager_liveness -= 1
 
                 if self._manager_liveness == 0:
                     self._kill.set()
@@ -214,8 +252,9 @@ class Broker:
 
         self._tasks = [
             asyncio.create_task(self._manage_client_fe()),
-            asyncio.create_task(self._manage_mgr_fe()),
-            asyncio.create_task(self._manage_worker_be())
+            # asyncio.create_task(self._manage_mgr_fe()),
+            # asyncio.create_task(self._manage_worker_be()),
+            # asyncio.create_task(self._manage_client_be())
         ]
 
         await asyncio.gather(*self._tasks)
@@ -225,5 +264,5 @@ class Broker:
 
 
 def main():
-    w = Broker("aagb", "tcpp://*:5558", "tcp://*:5557", "tcp://*:5556")
+    w = Broker("aagb", "tcp://*:5558", "tcp://*:5557", "tcp://*:5556")
     w.run()

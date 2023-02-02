@@ -69,6 +69,7 @@ def main():
         else:
             poller = poll_workers
         socks = dict(poller.poll(HEARTBEAT_INTERVAL * 1000))
+        print(socks)
 
         # Handle worker activity on backend
         if socks.get(backend) == zmq.POLLIN:

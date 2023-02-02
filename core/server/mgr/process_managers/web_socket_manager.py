@@ -31,39 +31,47 @@ class WebSocketManager(ProcessManager):
             Instance of parent Manager
         """
         self._manager = manager
+        self._broker_uuid = self._manager._broker_uuid
         self._redis_conn = self._manager._redis_conn
         self._mgr_be = self._manager._mgr_be
         self._worker_fe = self._manager._worker_fe
 
-    async def _consumer_message(self, address, command, params):
+    async def _consume_message(self, client_address, command, params):
         res = False
         match command:
             case "start":
-                res = await self._start_worker(address, **params)
+                res = await self._start_worker(client_address, **params)
             case "stop":
-                res = await self._stop_worker(address, **params)
+                res = await self._stop_worker(client_address, **params)
             case "status":
-                res = await self._get_status(address, **params)
+                res = await self._get_status(client_address, **params)
             case _:
-                msg = [address, f"Invalid command {command} for 'websocket'"]
-                self._mgr_be.send_multipart(msg)
+                msg_content = [
+                    protocol.ERROR,
+                    f"Invalid command {command} for 'websocket'".encode()
+                ]
+                await self._send_client_response(client_address, msg_content)
 
         if res:
-            msg = [address, protocol.ACK]
-            await self._mgr_be.send_multipart(msg)
+            msg_content = [protocol.ACK]
+            await self._send_client_response(client_address, msg_content)
 
     async def _start_worker(self, address, **params):
         # Check and validate params
-        worker_uuid = uuid.uuid4()
+        worker_uuid = str(uuid.uuid4())
 
         # Generate command to start worker
-        num_processes = await self._redis_conn.get("num_processes")
+        num_workers = await self._redis_conn.get("num_workers")
+        num_workers = int(num_workers.decode())
 
-        if num_processes <= 0:
-            msg = [address, b"Too many processes"]
-            await self._mgr_be.send_multipart(msg)
+        if num_workers >= self._manager._max_processes:
+            msg_content = [
+                protocol.ERROR,
+                b"Too many active workers. Try again later"
+            ]
+            await self._send_client_response(address, msg_content)
 
-        await self._redis_conn.decr("num_processes")
+        await self._redis_conn.incr("num_workers")
 
         # Start worker using subprocess
 
@@ -76,10 +84,10 @@ class WebSocketManager(ProcessManager):
             "status_details": ""
         }
 
-        await self._redis_conn.set(worker_uuid, worker_entry)
+        await self._redis_conn.set(worker_uuid, json.dumps(worker_entry).encode())
 
-        msg = [address, protocol.ACK]
-        await self._mgr_be.send_multipart(msg)
+        msg_content = [protocol.ACK, worker_uuid.encode()]
+        await self._send_client_response(address, msg_content)
 
     async def _stop_worker(self, client_address, **params):
         entry = await self._fetch_redis_entry(client_address, **params)
@@ -87,39 +95,47 @@ class WebSocketManager(ProcessManager):
         if entry is None:
             return
 
-        worker_address = params["worker_address"]
+        worker_address = params["uuid"]
 
         if entry["worker_type"] != "web_socket":
             msg = [client_address, f"No web socket with uuid {worker_address}".encode()]
             await self._mgr_be.send_multipart(msg)
             return
 
-        msg = [worker_address, protocol.DIE]
-        await self._worker_fe.send_multipart(msg)
+        msg_content = [protocol.DIE]
+        self._send_worker_message(worker_address, msg_content)
+
+        await self._redis_conn.decr("num_workers")
 
         entry["status"] = "STOPPED"
         entry["status_details"] = ""
 
-        await self._redis_conn.set(worker_address, entry)
+        await self._redis_conn.set(worker_address, json.dumps(entry).encode())
 
-        msg = [client_address, protocol.ACK]
-        await self._mgr_be.send_multipart(msg)
+        msg_content = [protocol.ACK]
+        await self._send_client_response(client_address, msg_content)
 
     async def _get_status(self, client_address, **params):
+        print("HERE")
         entry = await self._fetch_redis_entry(client_address, **params)
+        print(entry)
 
         if entry is None:
             return
 
-        worker_address = params["worker_address"]
+        worker_address = params["uuid"]
 
         if entry["worker_type"] != "web_socket":
-            msg = [client_address, f"No web socket with uuid {worker_address}".encode()]
-            await self._mgr_be.send_multipart(msg)
+            msg_content = [
+                protocol.ERROR,
+                f"No web socket with uuid {worker_address}".encode()
+            ]
+            await self._send_client_response(client_address, msg_content)
             return
 
-        msg = [client_address, protocol.ACK, json.dumps(entry).encode()]
-        await self._mgr_be.send_multipart(msg)
+        msg_content = [protocol.ACK, json.dumps(entry).encode()]
+        print(client_address)
+        await self._send_client_response(client_address, msg_content)
 
 
 def main():

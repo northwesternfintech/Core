@@ -14,13 +14,14 @@ import redis.asyncio
 
 # from .process_managers.backtest_manager import BacktestManager
 from .process_managers.web_socket_manager import WebSocketManager
+from .process_managers.process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
 
 __all__ = ('Manager',)
 
 
-class Manager:
+class Manager(ProcessManager):
     # Manager sends heartbeats to interchange and also receives tasks from frontend from interchange to handle
     """Manages the startup and status/state of worker processes"""
     def __init__(self,
@@ -37,8 +38,8 @@ class Manager:
                  heartbeat_liveness: int = 3):
         self._kill = asyncio.Event()
 
-        self._manager_uuid = manager_uuid
-        self._broker_uuid = broker_uuid
+        self._manager_uuid = manager_uuid.encode()
+        self._broker_uuid = broker_uuid.encode()
 
         self._num_threads = num_threads
         self._max_processes = max_processes
@@ -51,6 +52,7 @@ class Manager:
         self._context = zmq.asyncio.Context()
 
         self._mgr_be = self._context.socket(zmq.DEALER)
+        self._mgr_be.setsockopt(zmq.IDENTITY, b"manager")
         self._mgr_be.connect(broker_address)
         self._mgr_be_poller = zmq.asyncio.Poller()
         self._mgr_be_poller.register(self._mgr_be, zmq.POLLIN)
@@ -71,7 +73,7 @@ class Manager:
         self._web_socket_manager = WebSocketManager(self)
         # self._backtest_manager = BacktestManager(self)
 
-    async def _handle_worker_socket(self):
+    async def _handle_worker_fe_socket(self):
         """Listens for status updates from workers and updates status on redis.
         """
         while not self._kill.is_set():
@@ -98,33 +100,49 @@ class Manager:
 
                 await self._redis_conn.set(worker_address, entry)
 
-    async def _handle_client_socket(self):
+    async def _handle_mgr_be_socket(self):
+        await self._mgr_be.send_multipart([b"READY"])
         while not self._kill.is_set():
             frames = await self._mgr_be.recv_multipart()
 
             if not frames:
                 continue
 
-            res = self._validate_client_message(frames)
+            # Handle heartbeat
+            if frames[0] == protocol.HEARTBEAT:
+                continue
+            print(frames)
+            # await self._send_client_response(frames[0], [frames[1]])
+            # continue
+            res = await self._validate_client_message(frames)
 
             if not res:
                 continue
 
             address, service_type, command, params = res
+            # print(res)
+            # continue
 
             match service_type:
-                case b"websocket":
+                case "web_socket":
                     await self.web_sockets._consume_message(address, command, params)
-                case b"backtest":
+                case "backtest":
                     await self.backtest._consume_message(address, command, params)
                 case _:
-                    msg = [address, protocol.ERROR, b"Invalid service"]
-                    await self._mgr_be.send_multipart(msg)
+                    msg_content = [
+                        protocol.ERROR,
+                        f"Invalid service type: {service_type}".encode()
+                    ]
+                    await self._send_client_response(address, msg_content)
 
-    def _async_run(self):
-        self._tasks = [self._consume_messages() for _ in range(self._num_threads)]
+    async def _async_run(self):
+        # self._tasks = [self._consume_messages() for _ in range(self._num_threads)]
+        self._tasks = [self._handle_mgr_be_socket()]
 
-        asyncio.gather(*self._tasks)
+        await asyncio.gather(*self._tasks)
+
+    def run(self):
+        asyncio.run(self._async_run())
 
     def shutdown(self):
         """Deallocates all necessary resources. No manager operations
@@ -146,3 +164,4 @@ class Manager:
 def main():
     m = Manager("manager", "broker", "tcp://localhost:5558", "tcp://localhost:5556",
     "localhost", 6379)
+    m.run()

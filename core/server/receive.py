@@ -168,12 +168,21 @@ def run_worker(context, address, i=None, should_fail=False):
 
 def main():
     context = zmq.Context(1)
+    client = context.socket(zmq.REQ)
+    client.connect("tcp://localhost:5555")
+    worker = context.socket(zmq.DEALER)
+    worker.connect("tcp://localhost:5556")
 
-    from concurrent.futures import ThreadPoolExecutor
+    client.send(b"test")
+    worker.send(b"\x01")
+    print("DONE")
 
-    with ThreadPoolExecutor() as executor:
-        executor.submit(run_worker, context, "tcp://localhost:5557", i="manager", should_fail=False)
-        executor.submit(run_worker, context, "tcp://localhost:5556", should_fail=True)
+
+    # from concurrent.futures import ThreadPoolExecutor
+
+    # with ThreadPoolExecutor() as executor:
+    #     executor.submit(run_worker, context, "tcp://localhost:5557", i="manager", should_fail=False)
+    #     executor.submit(run_worker, context, "tcp://localhost:5556", should_fail=True)
         # for i in range(1000):
         #     executor.submit(run_worker, context, "tcp://localhost:5556", should_fail=True)
 
