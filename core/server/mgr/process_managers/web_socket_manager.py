@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Set, Union, ByteString
 
 from ...workers.web_socket_worker import WebSocketWorker
 from .process_manager import ProcessManager
@@ -36,27 +36,49 @@ class WebSocketManager(ProcessManager):
         self._mgr_be = self._manager._mgr_be
         self._worker_fe = self._manager._worker_fe
 
-    async def _consume_message(self, client_address, command, params):
-        res = False
+    async def _consume_message(self,
+                               client_address: ByteString,
+                               command: str,
+                               params: Dict):
+        """Parses command and calls appropriate function. Sends error message to 
+        client if invalid command type
+
+        Parameters
+        ----------
+        client_address : ByteString
+            ByteString of address of client
+        command : str
+            Command that client wants to run
+        params : Dict
+            Dictionary containing parameters for command
+        """
         match command:
             case "start":
-                res = await self._start_worker(client_address, **params)
+                await self._start_worker(client_address, **params)
             case "stop":
-                res = await self._stop_worker(client_address, **params)
+                await self._stop_worker(client_address, **params)
             case "status":
-                res = await self._get_status(client_address, **params)
+                await self._get_status(client_address, **params)
             case _:
                 msg_content = [
                     protocol.ERROR,
                     f"Invalid command {command} for 'websocket'".encode()
                 ]
                 await self._send_client_response(client_address, msg_content)
+                return
 
-        if res:
-            msg_content = [protocol.ACK]
-            await self._send_client_response(client_address, msg_content)
+    async def _start_worker(self, client_address: ByteString, **params):
+        """Starts web socket worker and makes a corresponding entry into redis.
+        Sends ACK and worker uuid to client if successful, error message if
+        unsuccessful
 
-    async def _start_worker(self, address, **params):
+        Parameters
+        ----------
+        client_address : ByteString
+            ByteString of address of client
+        **params
+            Keyword arguments. Must contain keys "exchange", "tickers"
+        """
         # Check and validate params
         worker_uuid = str(uuid.uuid4())
 
@@ -69,7 +91,8 @@ class WebSocketManager(ProcessManager):
                 protocol.ERROR,
                 b"Too many active workers. Try again later"
             ]
-            await self._send_client_response(address, msg_content)
+            await self._send_client_response(client_address, msg_content)
+            return
 
         await self._redis_conn.incr("num_workers")
 
@@ -87,10 +110,22 @@ class WebSocketManager(ProcessManager):
         await self._redis_conn.set(worker_uuid, json.dumps(worker_entry).encode())
 
         msg_content = [protocol.ACK, worker_uuid.encode()]
-        await self._send_client_response(address, msg_content)
+        await self._send_client_response(client_address, msg_content)
 
-    async def _stop_worker(self, client_address, **params):
-        entry = await self._fetch_redis_entry(client_address, **params)
+    async def _stop_worker(self, client_address: ByteString, **params):
+        """Stops web socket worker, messages worker to die, and updates entry in
+        redis. Sends ACK to client if successful, error message if
+        unsuccessful
+
+        Parameters
+        ----------
+        client_address : ByteString
+            ByteString of address of client
+        **params
+            Keyword arguments. Must contain keys "uuid". "uuid" must correspond to
+            an active web socket worker
+        """
+        entry = await self._fetch_worker_redis_entry(client_address, **params)
 
         if entry is None:
             return
@@ -101,6 +136,8 @@ class WebSocketManager(ProcessManager):
             msg = [client_address, f"No web socket with uuid {worker_address}".encode()]
             await self._mgr_be.send_multipart(msg)
             return
+
+        # Check if worker is active
 
         msg_content = [protocol.DIE]
         self._send_worker_message(worker_address, msg_content)
@@ -115,9 +152,20 @@ class WebSocketManager(ProcessManager):
         msg_content = [protocol.ACK]
         await self._send_client_response(client_address, msg_content)
 
-    async def _get_status(self, client_address, **params):
+    async def _get_status(self, client_address: ByteString, **params):
+        """Retrieves worker status from redis. Sends ACK to client if successful,
+        error message if unsuccessful
+
+        Parameters
+        ----------
+        client_address : ByteString
+            ByteString of address of client to send status to
+        **params
+            Keyword arguments. Must contain keys "uuid". "uuid" must correspond to
+            a valid web socket worker
+        """
         print("HERE")
-        entry = await self._fetch_redis_entry(client_address, **params)
+        entry = await self._fetch_worker_redis_entry(client_address, **params)
         print(entry)
 
         if entry is None:

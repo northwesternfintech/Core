@@ -25,14 +25,14 @@ class Manager(ProcessManager):
     # Manager sends heartbeats to interchange and also receives tasks from frontend from interchange to handle
     """Manages the startup and status/state of worker processes"""
     def __init__(self,
-                 manager_uuid,
-                 broker_uuid,
-                 broker_address,
-                 worker_address,
-                 redis_host,
-                 redis_port,
+                 manager_uuid: str,
+                 broker_uuid: str,
+                 broker_address: str,
+                 worker_address: str,
+                 redis_host: str,
+                 redis_port: int,
                  num_threads=5,
-                 max_processes=multiprocessing.cpu_count() - 2,
+                 max_processes: int = multiprocessing.cpu_count() - 2,
                  heartbeat_interval_s: int = 1,
                  heartbeat_timeout_s: int = 3,
                  heartbeat_liveness: int = 3):
@@ -47,6 +47,7 @@ class Manager(ProcessManager):
         self._heartbeat_interval_s = heartbeat_interval_s
         self._heartbeat_timeout_s = heartbeat_timeout_s
         self._heartbeat_liveness = heartbeat_liveness
+        self._heartbeat_at = time.time() + self._heartbeat_interval_s
 
         # Initialize socket connections
         self._context = zmq.asyncio.Context()
@@ -74,7 +75,7 @@ class Manager(ProcessManager):
         # self._backtest_manager = BacktestManager(self)
 
     async def _handle_worker_fe_socket(self):
-        """Listens for status updates from workers and updates status on redis.
+        """Listens for status updates from workers and updates redis entry.
         """
         while not self._kill.is_set():
             frames = await self._worker_fe.recv_multipart()
@@ -101,7 +102,14 @@ class Manager(ProcessManager):
                 await self._redis_conn.set(worker_address, entry)
 
     async def _handle_mgr_be_socket(self):
+        """Handles the following tasks:
+
+        1. Periodically send heartbeats to broker
+        2. Check for heartbeats from broker
+        3. Handles requests from clients
+        """
         await self._mgr_be.send_multipart([b"READY"])
+
         while not self._kill.is_set():
             frames = await self._mgr_be.recv_multipart()
 
@@ -110,7 +118,7 @@ class Manager(ProcessManager):
 
             # Handle heartbeat
             if frames[0] == protocol.HEARTBEAT:
-                continue
+                pass
             print(frames)
             # await self._send_client_response(frames[0], [frames[1]])
             # continue
