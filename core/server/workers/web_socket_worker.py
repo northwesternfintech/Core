@@ -10,7 +10,7 @@ from .worker import Worker
 
 class WebSocketWorker(Worker):
     """Worker class for running a producer/consumer for
-    web sockets
+    websockets
     """
     def __init__(self,
                  exchange: str,
@@ -28,17 +28,17 @@ class WebSocketWorker(Worker):
                          heartbeat_liveness)
 
         self._ws_consumer = ZmqWSConsumer(self._context, publish_addres)
-        self._web_socket = CCXTWebSocket(exchange, tickers, self._ws_consumer)
+        self._websocket = CCXTWebSocket(exchange, tickers, self._ws_consumer)
 
     async def _shutdown(self):
-        await self._web_socket._ccxt_exchange.close()
+        await self._websocket._ccxt_exchange.close()
         self._ws_consumer._close()
 
         super()._shutdown()
 
     async def _run_async(self):
         tasks = super()._get_heartbeat_tasks()
-        tasks.append(asyncio.create_task(self._web_socket._run_async()))
+        tasks.append(asyncio.create_task(self._websocket._run_async()))
 
         try:
             await asyncio.gather(*tasks)

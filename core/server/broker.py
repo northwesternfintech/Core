@@ -114,7 +114,7 @@ class Broker:
         2. Empty frame: empty frame denoting beginning of message content
         (automatically added to message by REQ socket)
         3. Service type: the type of service to interface with as a byte string
-        (such as "web_socket" or "backtest")
+        (such as "websocket" or "backtest")
         4. Command: the command to provide to the service as a byte string (such
         as "start" or "stop")
         5. Params: parameters to pass to the command as a json dumped byte string
@@ -124,7 +124,7 @@ class Broker:
         (automatically stripped by ROUTER socket)
         2. Client address: the identity of the client's socket as a byte string
         3. Service type: the type of service to interface with as a byte string
-        (such as "web_socket" or "backtest")
+        (such as "websocket" or "backtest")
         4. Command: the command to provide to the service as a byte string (such
         as "start" or "stop")
         5. Params: parameters to pass to the command as a json dumped byte string

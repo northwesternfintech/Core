@@ -2,7 +2,7 @@ from abc import ABC
 import asyncio
 
 
-class WebsocketConsumer(ABC):
+class WebSocketConsumer(ABC):
     async def _async_consume(self, data_queue: asyncio.Queue) -> None:
         """Takes queue of data and does work on that data.
 

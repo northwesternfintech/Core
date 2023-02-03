@@ -1,18 +1,18 @@
-from .websocket_consumer import WebsocketConsumer
+from .websocket_consumer import WebSocketConsumer
 from .print_ws_consumer import PrintWSConsumer
 from .zmq_ws_consumer import ZmqWSConsumer
 from typing import Dict
 
 
-class WebsocketConsumerFactory:
+class WebSocketConsumerFactory:
     def __init__(self):
-        self._factory_map: Dict[str, WebsocketConsumer] = {
+        self._factory_map: Dict[str, WebSocketConsumer] = {
             "print": PrintWSConsumer,
             "zmq": ZmqWSConsumer
         }
 
-    def get(self, consumer_name: str) -> WebsocketConsumer:
-        """Retrieves WebsocketConsumer subclass based on 
+    def get(self, consumer_name: str) -> WebSocketConsumer:
+        """Retrieves WebSocketConsumer subclass based on 
         identifier string.
 
         Parameters
@@ -22,7 +22,7 @@ class WebsocketConsumerFactory:
 
         Returns
         -------
-        WebsocketConsumer
+        WebSocketConsumer
             Class (not instance) of websocket consumer.
         """
         if consumer_name not in self._factory_map:

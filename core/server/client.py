@@ -7,7 +7,7 @@ def start(socket):
         "tickers": ["BTC/USD"]
     }
 
-    msg = [b"web_socket", b"start", json.dumps(params).encode()]
+    msg = [b"websocket", b"start", json.dumps(params).encode()]
     socket.send_multipart(msg)
     return socket.recv_multipart()[1:]
 
@@ -15,7 +15,7 @@ def start(socket):
 def status(socket, uuid):
     params = { "uuid": uuid
     }
-    msg = [b"web_socket", b"status", json.dumps(params).encode()]
+    msg = [b"websocket", b"status", json.dumps(params).encode()]
     socket.send_multipart(msg)
     return socket.recv_multipart()[1:]
 
@@ -23,7 +23,7 @@ def status(socket, uuid):
 def stop(socket, uuid):
     params = { "uuid": uuid
     }
-    msg = [b"web_socket", b"stop", json.dumps(params).encode()]
+    msg = [b"websocket", b"stop", json.dumps(params).encode()]
     socket.send_multipart(msg)
     return socket.recv_multipart()[1:]
 

@@ -100,7 +100,7 @@ class WebSocketManager(ProcessManager):
 
         worker_entry = {
             "worker_uuid": worker_uuid,
-            "worker_type": "web_socket",
+            "worker_type": "websocket",
             "exchange": params["exchange"],
             "tickers": params["tickers"],
             "status": "STARTING",
@@ -132,7 +132,7 @@ class WebSocketManager(ProcessManager):
 
         worker_address = params["uuid"]
 
-        if entry["worker_type"] != "web_socket":
+        if entry["worker_type"] != "websocket":
             msg = [client_address, f"No web socket with uuid {worker_address}".encode()]
             await self._mgr_be.send_multipart(msg)
             return
@@ -173,7 +173,7 @@ class WebSocketManager(ProcessManager):
 
         worker_address = params["uuid"]
 
-        if entry["worker_type"] != "web_socket":
+        if entry["worker_type"] != "websocket":
             msg_content = [
                 protocol.ERROR,
                 f"No web socket with uuid {worker_address}".encode()

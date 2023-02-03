@@ -1,7 +1,7 @@
-from .websocket_consumer import WebsocketConsumer
+from .websocket_consumer import WebSocketConsumer
 
 
-class PrintWSConsumer(WebsocketConsumer):
+class PrintWSConsumer(WebSocketConsumer):
     def __init__(self):
         pass
 

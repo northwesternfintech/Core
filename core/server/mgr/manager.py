@@ -13,7 +13,7 @@ import redis
 import redis.asyncio
 
 # from .process_managers.backtest_manager import BacktestManager
-from .process_managers.web_socket_manager import WebSocketManager
+from .process_managers.websocket_manager import WebSocketManager
 from .process_managers.process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ class Manager(ProcessManager):
 
         self._redis_conn = redis.asyncio.Redis(host=self._redis_host, port=self._redis_port)
 
-        self._web_socket_manager = WebSocketManager(self)
+        self._websocket_manager = WebSocketManager(self)
         # self._backtest_manager = BacktestManager(self)
 
     async def _handle_worker_fe_socket(self):
@@ -132,8 +132,8 @@ class Manager(ProcessManager):
             # continue
 
             match service_type:
-                case "web_socket":
-                    await self.web_sockets._consume_message(address, command, params)
+                case "websocket":
+                    await self.websockets._consume_message(address, command, params)
                 case "backtest":
                     await self.backtest._consume_message(address, command, params)
                 case _:
@@ -155,13 +155,13 @@ class Manager(ProcessManager):
     def shutdown(self):
         """Deallocates all necessary resources. No manager operations
         should be done after calling this function."""
-        self.web_sockets.shutdown()
+        self.websockets.shutdown()
         self.backtest.shutdown()
 
     @property
-    def web_sockets(self) -> WebSocketManager:
-        """Provides access to web sockets"""
-        return self._web_socket_manager
+    def websockets(self) -> WebSocketManager:
+        """Provides access to websockets"""
+        return self._websocket_manager
 
     # @property
     # def backtest(self) -> BacktestManager:

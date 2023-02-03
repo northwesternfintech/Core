@@ -38,7 +38,7 @@ class ProcessManager(ABC):
 
         1. Client address: the identity of the client's socket as a byte string
         2. Service type: the type of service to interface with as a byte string
-        (such as "web_socket" or "backtest")
+        (such as "websocket" or "backtest")
         3. Command: the command to provide to the service as a byte string (such
         as "start" or "stop")
         4. Params: parameters to pass to the command as a json dumped byte string

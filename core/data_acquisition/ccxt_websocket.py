@@ -104,8 +104,8 @@ class CCXTWebSocket:
 
 
 def main():
-    from .websocket_consumers.websocket_consumer_factory import WebsocketConsumerFactory
-    ws_factory = WebsocketConsumerFactory()
+    from .websocket_consumers.websocket_consumer_factory import WebSocketConsumerFactory
+    ws_factory = WebSocketConsumerFactory()
     print_consumer = ws_factory.get("print")()
     ws = CCXTWebSocket("kraken", ["BTC/USD"], print_consumer)
     ws.run()

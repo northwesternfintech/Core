@@ -2,10 +2,10 @@ import ujson
 import zmq
 import zmq.asyncio
 
-from .websocket_consumer import WebsocketConsumer
+from .websocket_consumer import WebSocketConsumer
 
 
-class ZmqWSConsumer(WebsocketConsumer):
+class ZmqWSConsumer(WebSocketConsumer):
     def __init__(self, context, address: str = "tcp://127.0.0.1:50002"):
         """Pushes data from asyncio queue to zmq publish socket.
 
