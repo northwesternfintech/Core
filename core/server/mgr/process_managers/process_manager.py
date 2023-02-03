@@ -31,6 +31,9 @@ class ProcessManager(ABC):
         self._mgr_be = self._manager._broker_socket
         self._worker_fe = self._manager._worker_socket
 
+    async def _shutdown(self):
+        raise NotImplementedError
+
     async def _validate_client_message(self, frames: List) -> Optional[Tuple]:
         """Takes raw frames from client response, validates it, and then 
         decodes/parses it and returns the results. A valid client message consists

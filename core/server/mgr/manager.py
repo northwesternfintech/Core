@@ -37,6 +37,7 @@ class Manager(ProcessManager):
                  heartbeat_timeout_s: int = 3,
                  heartbeat_liveness: int = 3):
         self._kill = asyncio.Event()
+        self._lock = asyncio.Lock()
 
         self._manager_uuid = manager_uuid.encode()
         self._broker_uuid = broker_uuid.encode()
@@ -47,7 +48,9 @@ class Manager(ProcessManager):
         self._heartbeat_interval_s = heartbeat_interval_s
         self._heartbeat_timeout_s = heartbeat_timeout_s
         self._heartbeat_liveness = heartbeat_liveness
-        self._heartbeat_at = time.time() + self._heartbeat_interval_s
+        
+        self._broker_last_seen = time.time()
+        self._broker_liveness = self._heartbeat_liveness
 
         # Initialize socket connections
         self._context = zmq.asyncio.Context()
@@ -104,59 +107,98 @@ class Manager(ProcessManager):
     async def _handle_mgr_be_socket(self):
         """Handles the following tasks:
 
-        1. Periodically send heartbeats to broker
-        2. Check for heartbeats from broker
-        3. Handles requests from clients
+        1. Check for heartbeats from broker
+        2. Handles requests from clients
         """
         await self._mgr_be.send_multipart([b"READY"])
 
         while not self._kill.is_set():
-            frames = await self._mgr_be.recv_multipart()
+            socks = await self._mgr_be_poller.poll(self._heartbeat_timeout_s)
+            socks = dict(socks)
 
-            if not frames:
-                continue
+            if socks.get(self._mgr_be) == zmq.POLLIN:
+                frames = await self._mgr_be.recv_multipart()
 
-            # Handle heartbeat
-            if frames[0] == protocol.HEARTBEAT:
-                pass
-            print(frames)
-            # await self._send_client_response(frames[0], [frames[1]])
-            # continue
-            res = await self._validate_client_message(frames)
+                if not frames:
+                    continue
 
-            if not res:
-                continue
+                # Handle heartbeat
+                if frames[0] == protocol.HEARTBEAT:
+                    self._broker_last_seen = time.time()
 
-            address, service_type, command, params = res
-            # print(res)
-            # continue
+                    async with self._lock:
+                        self._broker_liveness = self._heartbeat_liveness
 
-            match service_type:
-                case "websocket":
-                    await self.websockets._consume_message(address, command, params)
-                case "backtest":
-                    await self.backtest._consume_message(address, command, params)
-                case _:
-                    msg_content = [
-                        protocol.ERROR,
-                        f"Invalid service type: {service_type}".encode()
-                    ]
-                    await self._send_client_response(address, msg_content)
+                    continue
+
+                res = await self._validate_client_message(frames)
+
+                if not res:
+                    continue
+
+                address, service_type, command, params = res
+
+                match service_type:
+                    case "websocket":
+                        await self.websockets._consume_message(address, command, params)
+                    case "backtest":
+                        await self.backtest._consume_message(address, command, params)
+                    case _:
+                        msg_content = [
+                            protocol.ERROR,
+                            f"Invalid service type: {service_type}".encode()
+                        ]
+                        await self._send_client_response(address, msg_content)
+            else:
+                if time.time() > self._broker_last_seen + self._heartbeat_timeout_s:
+                    async with self._lock:
+                        self._broker_liveness -= 1
+
+                    if self._broker_liveness <= 0:
+                        self._kill.set()
+                        break
+
+                    self._broker_last_seen = time.time()
+
+        await self._shutdown()
+
+    async def _send_heartbeat(self):
+        """Periodically sends heartbeat to broker"""
+        while not self._kill.is_set():
+            self._mgr_be.send_multipart([protocol.HEARTBEAT])
+            await asyncio.sleep(self._heartbeat_interval_s)
 
     async def _async_run(self):
         # self._tasks = [self._consume_messages() for _ in range(self._num_threads)]
-        self._tasks = [self._handle_mgr_be_socket()]
+        self._tasks = [
+            asyncio.create_task(self._handle_mgr_be_socket()),
+            asyncio.create_task(self._send_heartbeat())
+        ]
 
-        await asyncio.gather(*self._tasks)
+        try:
+            await asyncio.gather(*self._tasks)
+        except asyncio.CancelledError:
+            return
 
     def run(self):
         asyncio.run(self._async_run())
 
-    def shutdown(self):
+    async def _shutdown(self):
         """Deallocates all necessary resources. No manager operations
         should be done after calling this function."""
-        self.websockets.shutdown()
-        self.backtest.shutdown()
+        await self.websockets._shutdown()
+        # await self.backtest._shutdown()
+
+        self._mgr_be.setsockopt(zmq.LINGER, 0)
+        self._worker_fe.setsockopt(zmq.LINGER, 0)
+
+        self._mgr_be.close()
+        self._worker_fe.close()
+
+        self._context.term()
+
+        for task in self._tasks:
+            task.cancel()
 
     @property
     def websockets(self) -> WebSocketManager:

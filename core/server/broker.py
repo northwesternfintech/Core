@@ -129,7 +129,8 @@ class Broker:
         as "start" or "stop")
         5. Params: parameters to pass to the command as a json dumped byte string
         """
-        while True:
+        while not self._kill.is_set():
+            print("_manager_client_fe")
             frames = await self._client_fe.recv_multipart()
             print(f"RECEIVED FROM CLIENT: {frames}")
             client_address = frames[0]
@@ -148,7 +149,8 @@ class Broker:
         """
         heartbeat_at = time.time() + self._heartbeat_interval_s
 
-        while True:
+        while not self._kill.is_set():
+            print("_manager_mgr_fe")
             socks = await self._mgr_fe_poller.poll(self._heartbeat_timeout_s * 1000)
             socks = dict(socks)
 
@@ -165,6 +167,7 @@ class Broker:
                     continue
 
                 msg = frames[1:]
+                print(msg)
 
                 # Check if heartbeat
                 if len(msg) == 1 and msg[0] == protocol.HEARTBEAT:
@@ -179,8 +182,8 @@ class Broker:
                     print(f"Sending to client: {msg}")
                     await self._client_fe.send_multipart(msg)
             else:
-                # print("Missed manager heartbeat")
-                # self._manager_liveness -= 1
+                print("Missed manager heartbeat")
+                self._manager_liveness -= 1
 
                 if self._manager_liveness == 0:
                     self._kill.set()
@@ -192,6 +195,8 @@ class Broker:
                 self._mgr_fe.send_multipart(msg)
 
                 heartbeat_at = time.time() + self._heartbeat_interval_s
+        
+        await self._shutdown()
 
     async def _manage_worker_be(self):
         """Handles the following tasks:
@@ -205,6 +210,7 @@ class Broker:
         heartbeat_at = time.time() + self._heartbeat_interval_s
 
         while not self._kill.is_set():
+            print("_manager_worker_be")
             socks = await self._worker_be_poller.poll(self._heartbeat_timeout_s * 1000)
             socks = dict(socks)
 
@@ -270,8 +276,25 @@ class Broker:
             # asyncio.create_task(self._manage_worker_be()),
             # asyncio.create_task(self._manage_client_be())
         ]
+        try:
+            await asyncio.gather(*self._tasks)
+            print("HERE")
+        except asyncio.CancelledError:
+            return
 
-        await asyncio.gather(*self._tasks)
+    async def _shutdown(self):
+        self._client_fe.setsockopt(zmq.LINGER, 0)
+        self._mgr_fe.setsockopt(zmq.LINGER, 0)
+        self._worker_be.setsockopt(zmq.LINGER, 0)
+
+        self._client_fe.close()
+        self._mgr_fe.close()
+        self._worker_be.close()
+
+        self._context.term()
+
+        for task in self._tasks:
+            task.cancel()
 
     def run(self):
         asyncio.run(self._run_async())

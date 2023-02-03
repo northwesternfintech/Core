@@ -185,6 +185,9 @@ class WebSocketManager(ProcessManager):
         print(client_address)
         await self._send_client_response(client_address, msg_content)
 
+    async def _shutdown(self):
+        return
+
 
 def main():
     pass
