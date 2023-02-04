@@ -8,6 +8,7 @@ import requests
 from tabulate import tabulate
 
 from .mgr.utils import find_open_ports
+from .docker.docker_build_python import repo_to_container
 
 DIR_HOME = os.path.expanduser('~')
 DIR_NUFT = os.path.join(DIR_HOME, '.nuft')
@@ -55,6 +56,8 @@ def app(ctx, nuft_dir: str, config_path: str):
     ctx.obj = NUFTConfig(config_path, nuft_dir)
 
 
+
+
 @app.command('start')
 @click.pass_context
 def start_server(ctx):
@@ -83,6 +86,18 @@ def start_server(ctx):
 
     with open(nuft_config.config_path, 'w') as f:
         nuft_config.config.write(f)
+
+@app.group('docker')
+def docker_handler():
+    pass
+
+@docker_handler.command('generate')
+@click.argument('repo')
+@click.argument('file')
+@click.argument('img')
+def docker_generate(repo, file, img):
+    result = repo_to_container(repo, file, img)
+    click.echo("Done")
 
 
 @app.command('shutdown')
