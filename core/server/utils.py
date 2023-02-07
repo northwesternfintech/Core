@@ -34,3 +34,18 @@ def find_open_ports(num_ports) -> List[int]:
         sock.close()
 
     return free_ports
+
+
+def convert_tcp_address(tcp_address: str, interface: str = "localhost"):
+    """Replaces the wildcard ("*") in a tcp_address (e.g. "tcp://*:5000")
+    with the interface 
+
+    Parameters
+    ----------
+    tcp_address : str
+        ZMQ tcp address string to convert (e.g. "tcp://*:5000")
+    interface : str, optional
+        String to replace wildcard ("*") with, by default "localhost". If no
+        wildcard is found, return tcp_address
+    """
+    return tcp_address.replace("*", interface)

@@ -11,6 +11,7 @@ from .. import protocol
 import json
 import redis
 import redis.asyncio
+import argparse
 
 # from .process_managers.backtest_manager import BacktestManager
 from .process_managers.websocket_manager import WebSocketManager
@@ -210,6 +211,82 @@ class Manager(ProcessManager):
     #     """Provides access to backtest"""
     #     return self._backtest_manager
 
+def cli_run():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--manager-uuid", required=True,
+        help="uuid of manager"
+    )
+
+    parser.add_argument(
+        "--broker-uuid", required=True,
+        help="uuid of broker"
+    )
+
+    parser.add_argument(
+        "--broker-address", required=True,
+        help="address to reach broker socket"
+    )
+
+    parser.add_argument(
+        "--worker-address", required=True,
+        help="address to reach worker socket"
+    )
+
+    parser.add_argument(
+        "--redis-host", required=True,
+        help="host of redis server to use"
+    )
+
+    parser.add_argument(
+        "--redis-port", required=True, type=int,
+        help="port of redis server"
+    )
+
+    parser.add_argument(
+        "--max-processes", required=False, type=int,
+        default=multiprocessing.cpu_count() - 2, help="uuid of interchange"
+    )
+
+    parser.add_argument(
+        "--heartbeat-interval-s", required=False, type=int,
+        default=1, help="uuid of interchange"
+    )
+
+    parser.add_argument(
+        "--heartbeat-timeout-s", required=False, type=int,
+        default=3, help="uuid of interchange"
+    )
+
+    parser.add_argument(
+        "--heartbeat-liveness", required=False, type=int,
+        default=3, help="uuid of interchange"
+    )
+
+    args = parser.parse_args()
+
+    # pub_sub_ports = None
+    # if isinstance(args.pub_sub_ports, str):
+    #     pub_str, sub_str = args.pub_sub_ports.split(",")
+    #     pub_sub_ports = (int(pub_str), int(sub_str))
+    # else:
+    #     pub_sub_ports = args.pub_sub_ports
+
+    manager = Manager(
+        args.manager_uuid,
+        args.broker_uuid,
+        args.broker_address,
+        args.worker_address,
+        args.redis_host,
+        args.redis_port,
+        max_processes=args.max_processes,
+        heartbeat_interval_s=args.heartbeat_interval_s,
+        heartbeat_timeout_s=args.heartbeat_timeout_s,
+        heartbeat_liveness=args.heartbeat_liveness
+    )
+
+    manager.run()
 
 def main():
     m = Manager("manager", "broker", "tcp://localhost:5558", "tcp://localhost:5556",

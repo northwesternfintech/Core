@@ -6,28 +6,40 @@ import zmq
 import zmq.asyncio
 
 from . import protocol
-
+import argparse
+import subprocess
+from .utils import convert_tcp_address
 
 class Broker:
     # Client talks to frontend, frontend is fowarded to manager, manager talks to backend
     def __init__(self,
-                 broker_uuid,
-                 manager_address,
-                 frontend_address,
-                 backend_address,
+                 broker_uuid: str,
+                 manager_uuid: str,
+                 manager_address: str,
+                 frontend_address: str,
+                 backend_address: str,
+                 redis_host: str,
+                 redis_port: str,
                 #  publish_address,
                 #  subscribe_address,
                  heartbeat_interval_s: int = 1,
                  heartbeat_timeout_s: int = 3,
                  heartbeat_liveness: int = 3,):
-        # self._broker_uuid = broker_uuid
-        self._broker_uuid = b"broker"
+        self._broker_uuid = broker_uuid.encode()
+        self._manager_uuid = manager_uuid.encode()
         self._heartbeat_interval_s = heartbeat_interval_s
         self._heartbeat_timeout_s = heartbeat_timeout_s
         self._heartbeat_liveness = heartbeat_liveness
         self._manager_liveness = heartbeat_liveness
 
+        self._redis_host = redis_host
+        self._redis_port = redis_port
+
         # Initialize sockets and cconnections
+        self._manager_address = manager_address
+        self._backend_address = backend_address
+        self._frontend_address = frontend_address
+
         self._context = zmq.asyncio.Context()
 
         # Receives messages from clients
@@ -65,8 +77,18 @@ class Broker:
         ValueError
             Raises error if manager times out and doesn't connect in time
         """
-        # self._manager_uuid = f"manager_{uuid.uuid4()}".encode()
-        self._manager_uuid = b"manager"
+        manager_cmd = (
+            "manager "
+            f"--manager-uuid={self._manager_uuid.decode()} "
+            f"--broker-uuid={self._broker_uuid.decode()} "
+            f"--broker-address={convert_tcp_address(self._manager_address)} "
+            f"--worker-address={convert_tcp_address(self._backend_address)} "
+            f"--redis-host={self._redis_host} "
+            f"--redis-port={self._redis_port} "
+        )
+        print(manager_cmd)
+        p = subprocess.Popen(manager_cmd.split(), shell=False, start_new_session=True)
+        print(p.pid)
         f = await self._mgr_fe.recv_multipart()
         print(f)
         print("____")
@@ -299,7 +321,89 @@ class Broker:
     def run(self):
         asyncio.run(self._run_async())
 
+def cli_run():
+    """
+
+    broker --broker-uuid="broker" --manager-uuid="manager" --manager-address="tcp://*:5558" --frontend-address="tcp://*:5557" --backend-address=""tcp://*:5556 --redis-host="localhost" --redis-port=6379
+
+    """
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--broker-uuid", required=True,
+        help="uuid of broker"
+    )
+
+    parser.add_argument(
+        "--manager-uuid", required=True,
+        help="uuid of manager"
+    )
+
+    parser.add_argument(
+        "--manager-address", required=True,
+        help="address to bind manager socket"
+    )
+
+    parser.add_argument(
+        "--frontend-address", required=True,
+        help="address to bind frontend socket"
+    )
+
+    parser.add_argument(
+        "--backend-address", required=True,
+        help="address to bind backend socket"
+    )
+
+    parser.add_argument(
+        "--redis-host", required=True,
+        help="host of redis server to use"
+    )
+
+    parser.add_argument(
+        "--redis-port", required=True, type=int,
+        help="port of redis server"
+    )
+
+    parser.add_argument(
+        "--heartbeat-interval-s", required=False, type=int,
+        default=1, help="uuid of interchange"
+    )
+
+    parser.add_argument(
+        "--heartbeat-timeout-s", required=False, type=int,
+        default=3, help="uuid of interchange"
+    )
+
+    parser.add_argument(
+        "--heartbeat-liveness", required=False, type=int,
+        default=3, help="uuid of interchange"
+    )
+
+    args = parser.parse_args()
+
+    # pub_sub_ports = None
+    # if isinstance(args.pub_sub_ports, str):
+    #     pub_str, sub_str = args.pub_sub_ports.split(",")
+    #     pub_sub_ports = (int(pub_str), int(sub_str))
+    # else:
+    #     pub_sub_ports = args.pub_sub_ports
+
+    broker = Broker(
+        args.broker_uuid,
+        args.manager_uuid,
+        args.manager_address,
+        args.frontend_address,
+        args.backend_address,
+        args.redis_host,
+        args.redis_port,
+        heartbeat_interval_s=args.heartbeat_interval_s,
+        heartbeat_timeout_s=args.heartbeat_timeout_s,
+        heartbeat_liveness=args.heartbeat_liveness
+    )
+
+    broker.run()
 
 def main():
-    w = Broker("aagb", "tcp://*:5558", "tcp://*:5557", "tcp://*:5556")
+    w = Broker("broker", "manager", "tcp://127.0.0.1:5558", "tcp://127.0.0.1:5557", "tcp://127.0.0.1:5556",
+               "localhost", 6379)
     w.run()
