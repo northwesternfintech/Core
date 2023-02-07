@@ -467,19 +467,18 @@ class Strategy:
         print(f"{len(self.dates)-len(self.date_tracker)}/{len(self.dates)}")
         return datetime(d.year, d.month, d.day, 9, 30)
 
-import BollingerBandsMultiStock
 import dummy
 
 
 s = Strategy(
     algo=None,
-    transaction_cost=0.001,
+    transaction_cost=0.0001,
     start_balance=10000,
     name='test'
 )
 
 
-d = dummy.bollinger_multi(tickers=s.tickers,stdDevs=3,days=3)
+d = dummy.bollinger_multi(tickers = s.tickers)
 s.set_algo(d)
 
 s.back_testing()
