@@ -57,12 +57,13 @@ class Manager(ProcessManager):
         self._context = zmq.asyncio.Context()
 
         self._mgr_be = self._context.socket(zmq.DEALER)
-        self._mgr_be.setsockopt(zmq.IDENTITY, b"manager")
+        self._mgr_be.setsockopt(zmq.IDENTITY, self._manager_uuid)
         self._mgr_be.connect(broker_address)
         self._mgr_be_poller = zmq.asyncio.Poller()
         self._mgr_be_poller.register(self._mgr_be, zmq.POLLIN)
 
         self._worker_fe = self._context.socket(zmq.DEALER)
+        self._worker_fe.setsockopt(zmq.IDENTITY, self._manager_uuid)
         self._worker_fe.connect(worker_address)
 
         # Initialize redis
@@ -111,8 +112,6 @@ class Manager(ProcessManager):
         1. Check for heartbeats from broker
         2. Handles requests from clients
         """
-        await self._mgr_be.send_multipart([b"READY"])
-
         while not self._kill.is_set():
             socks = await self._mgr_be_poller.poll(self._heartbeat_timeout_s)
             socks = dict(socks)
@@ -170,6 +169,8 @@ class Manager(ProcessManager):
             await asyncio.sleep(self._heartbeat_interval_s)
 
     async def _async_run(self):
+        await self._mgr_be.send_multipart([protocol.READY])
+        await self._worker_fe.send_multipart([protocol.READY])
         # self._tasks = [self._consume_messages() for _ in range(self._num_threads)]
         self._tasks = [
             asyncio.create_task(self._handle_mgr_be_socket()),

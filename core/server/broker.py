@@ -20,8 +20,8 @@ class Broker:
                  backend_address: str,
                  redis_host: str,
                  redis_port: str,
-                #  publish_address,
-                #  subscribe_address,
+                #  publish_address: str,
+                #  subscribe_address: str,
                  heartbeat_interval_s: int = 1,
                  heartbeat_timeout_s: int = 3,
                  heartbeat_liveness: int = 3,):
@@ -35,7 +35,7 @@ class Broker:
         self._redis_host = redis_host
         self._redis_port = redis_port
 
-        # Initialize sockets and cconnections
+        # Initialize sockets and connections
         self._manager_address = manager_address
         self._backend_address = backend_address
         self._frontend_address = frontend_address
@@ -86,26 +86,22 @@ class Broker:
             f"--redis-host={self._redis_host} "
             f"--redis-port={self._redis_port} "
         )
-        print(manager_cmd)
-        p = subprocess.Popen(manager_cmd.split(), shell=False, start_new_session=True)
-        print(p.pid)
-        f = await self._mgr_fe.recv_multipart()
-        print(f)
-        print("____")
-        return
 
-        # Start manager using subprocess
-        mgr_startup_poller = zmq.Poller()
+        subprocess.Popen(manager_cmd.split(), shell=False, start_new_session=True)
+
+        mgr_startup_poller = zmq.asyncio.Poller()
         mgr_startup_poller.register(self._mgr_fe, zmq.POLLIN)
         mgr_startup_poller.register(self._worker_be, zmq.POLLIN)
 
         # Check to make sure manager is ready
         mgr_ready = 0
-        for _ in range(5):
-            socks = dict(mgr_startup_poller.poll(5000))
+        timeout_count = 5
+        while timeout_count:
+            socks = await mgr_startup_poller.poll(self._heartbeat_timeout_s * 1000)
+            socks = dict(socks)
 
             if socks.get(self._mgr_fe) == zmq.POLLIN:
-                frames = self._mgr_fe.recv_multipart()
+                frames = await self._mgr_fe.recv_multipart()
 
                 if len(frames) == 2:
                     address = frames[0]
@@ -114,13 +110,16 @@ class Broker:
                         mgr_ready += 1
 
             if socks.get(self._worker_be) == zmq.POLLIN:
-                frames = self._worker_be.recv_multipart()
+                frames = await self._worker_be.recv_multipart()
 
                 if len(frames) == 2:
                     address = frames[0]
 
                     if address == self._manager_uuid and frames[1] == protocol.READY:
                         mgr_ready += 1
+
+            if not socks:
+                timeout_count -= 1
 
             if mgr_ready == 2:
                 return
@@ -324,7 +323,7 @@ class Broker:
 def cli_run():
     """
 
-    broker --broker-uuid="broker" --manager-uuid="manager" --manager-address="tcp://*:5558" --frontend-address="tcp://*:5557" --backend-address=""tcp://*:5556 --redis-host="localhost" --redis-port=6379
+    broker --broker-uuid="broker" --manager-uuid="manager" --manager-address="tcp://127.0.0.1:5558" --frontend-address="tcp://127.0.0.1:5557" --backend-address=""tcp://127.0.0.1:5556 --redis-host="localhost" --redis-port=6379
 
     """
     parser = argparse.ArgumentParser()
