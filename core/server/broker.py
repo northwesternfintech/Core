@@ -4,6 +4,7 @@ from typing import Dict, Set
 
 import zmq
 import zmq.asyncio
+import threading
 
 from . import protocol
 import argparse
@@ -18,10 +19,10 @@ class Broker:
                  manager_address: str,
                  frontend_address: str,
                  backend_address: str,
+                 publish_address: str,
+                 subscribe_address: str,
                  redis_host: str,
                  redis_port: str,
-                #  publish_address: str,
-                #  subscribe_address: str,
                  heartbeat_interval_s: int = 1,
                  heartbeat_timeout_s: int = 3,
                  heartbeat_liveness: int = 3,):
@@ -39,6 +40,8 @@ class Broker:
         self._manager_address = manager_address
         self._backend_address = backend_address
         self._frontend_address = frontend_address
+        self._publish_address = publish_address
+        self._subscribe_address = subscribe_address
 
         self._context = zmq.asyncio.Context()
 
@@ -56,6 +59,13 @@ class Broker:
         # Sends messages to workers and receives worker responses
         self._worker_be = self._context.socket(zmq.ROUTER)
         self._worker_be.bind(backend_address)
+
+        # Pub/sub for financial data
+        self._xsub = self._context.socket(zmq.XSUB)
+        self._xsub.bind(self._publish_address)
+
+        self._xpub = self._context.socket(zmq.XPUB)
+        self._xpub.bind(self._subscribe_address)
 
         # Polls workers
         self._worker_be_poller = zmq.asyncio.Poller()
@@ -216,7 +226,7 @@ class Broker:
                 self._mgr_fe.send_multipart(msg)
 
                 heartbeat_at = time.time() + self._heartbeat_interval_s
-        
+
         await self._shutdown()
 
     async def _manage_worker_be(self):
@@ -291,6 +301,11 @@ class Broker:
     async def _run_async(self):
         await self._start_manager()
 
+        proxy_thread = threading.Thread(target=zmq.proxy, 
+                                        args=(self._xsub, self._xpub), 
+                                        daemon=True)
+        proxy_thread.start()
+
         self._tasks = [
             asyncio.create_task(self._manage_client_fe()),
             asyncio.create_task(self._manage_mgr_fe()),
@@ -299,7 +314,6 @@ class Broker:
         ]
         try:
             await asyncio.gather(*self._tasks)
-            print("HERE")
         except asyncio.CancelledError:
             return
 
@@ -307,10 +321,14 @@ class Broker:
         self._client_fe.setsockopt(zmq.LINGER, 0)
         self._mgr_fe.setsockopt(zmq.LINGER, 0)
         self._worker_be.setsockopt(zmq.LINGER, 0)
+        self._xpub.setsockopt(zmq.LINGER, 0)
+        self._xsub.setsockopt(zmq.LINGER, 0)
 
         self._client_fe.close()
         self._mgr_fe.close()
         self._worker_be.close()
+        self._xpub.close()
+        self._xsub.close()
 
         self._context.term()
 
@@ -323,7 +341,7 @@ class Broker:
 def cli_run():
     """
 
-    broker --broker-uuid="broker" --manager-uuid="manager" --manager-address="tcp://127.0.0.1:5558" --frontend-address="tcp://127.0.0.1:5557" --backend-address=""tcp://127.0.0.1:5556 --redis-host="localhost" --redis-port=6379
+    broker --broker-uuid="broker" --manager-uuid="manager" --manager-address="tcp://127.0.0.1:5558" --frontend-address="tcp://127.0.0.1:5557" --backend-address="tcp://127.0.0.1:5556" --publish-address="tcp://127.0.0.1:5559" --subscribe-address="tcp://127.0.0.1:6000" --redis-host="localhost" --redis-port=6379
 
     """
     parser = argparse.ArgumentParser()
@@ -351,6 +369,16 @@ def cli_run():
     parser.add_argument(
         "--backend-address", required=True,
         help="address to bind backend socket"
+    )
+
+    parser.add_argument(
+        "--publish-address", required=True,
+        help="address to bind xsub socket"
+    )
+
+    parser.add_argument(
+        "--subscribe-address", required=True,
+        help="address to bind spub socket"
     )
 
     parser.add_argument(
@@ -393,6 +421,8 @@ def cli_run():
         args.manager_address,
         args.frontend_address,
         args.backend_address,
+        args.publish_address,
+        args.subscribe_address,
         args.redis_host,
         args.redis_port,
         heartbeat_interval_s=args.heartbeat_interval_s,

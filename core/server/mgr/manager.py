@@ -212,6 +212,7 @@ class Manager(ProcessManager):
     #     """Provides access to backtest"""
     #     return self._backtest_manager
 
+
 def cli_run():
     parser = argparse.ArgumentParser()
 
