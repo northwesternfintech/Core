@@ -1,0 +1,2 @@
+The winrate of your strategy over the time interval of (2022-10-19,2022-11-8) is 0
+The sharpe ratio is -0.23918411970632747

@@ -1,7 +1,7 @@
 from asset_trading_lib import asset
 
-
 class portfolio:
+    
     def __init__(self, starting_balance=10000, transaction_cost=0):
 
         self.balance = starting_balance 

@@ -181,7 +181,7 @@ class Strategy:
                 tickOrders = self.algo.update(ticker_data_dict)
                      
                 tickOrders = list(tickOrders.items())
-                        
+                # print(tickOrders)
                 for order in tickOrders:
                     share = 0 
                     if order[1] == 'BUY': share = 1
@@ -193,7 +193,7 @@ class Strategy:
                     df = self.data[self.data['time']==self.current_time]
                     df = df[df['name']==order[0]]                    
                     if not df.empty:
-                        self.portfolio.place_order(order[0],float(df['close'].iloc[0]), share)
+                        self.portfolio.place_order(order[0], float(df['close'].iloc[0]), share)
                     else:
                         print(f"No price data for {order[0]} at {self.current_time}, skipping this order\n")
                     del df
@@ -478,7 +478,7 @@ s = Strategy(
 )
 
 
-d = dummy.bollinger_multi(tickers = s.tickers)
+d = dummy.dummy()
 s.set_algo(d)
 
 s.back_testing()
