@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import portfolio
 import numpy as np
 import time
+from tqdm import tqdm
 
 class Strategy:
     def __init__(
@@ -105,8 +106,10 @@ class Strategy:
        'SWK', 'CRL', 'MU', 'TRV', 'L', 'AEP', 'CI', 'DOW', 'CDW', 'BALL',
        'JNJ', 'WM', 'DOV', 'CRM', 'PGR', 'WAT', 'IEX', 'BWA', 'LRCX',
        'NWL', 'BLK', 'PPL']
+        
         # list of total assets in a given day at open/open
         # index maps to index of self.dates
+        self.current_prices = dict.fromkeys(self.tickers, float("inf"))
         self.total_daily_assets_open = []
         self.total_daily_assets_close = []
 
@@ -125,7 +128,7 @@ class Strategy:
     def set_algo(self,algo):
         self.algo = algo
 
-    def back_testing(self, start_date="2022-10-19", end_date="2022-11-8"):
+    def back_testing(self, start_date="2022-10-19", end_date="2022-11-10"):
         """
         back_testing takes in the start and end time, then proceed to
         test the performance of the strategy
@@ -145,11 +148,12 @@ class Strategy:
         self.dates = [d.to_pydatetime().date() for d in valid_dates]
         import copy; self.date_tracker = copy.deepcopy(self.dates)
         print("\n Started")
-        
+        pbar = tqdm(total=len(self.dates)+1)
         
         while self.current_time < self.end_time:
             
-            if self.is_trading_hour(self.current_time):            
+            if self.is_trading_hour(self.current_time): 
+                           
                 if self.current_time.hour == 9 and self.current_time.minute == 30:
                     self.calculate_assets('open')
                     # load today's file
@@ -159,65 +163,47 @@ class Strategy:
                     except FileNotFoundError:
                         self.current_time = self.next_nearest_trading_date(self.current_time)
                         continue
-                # now self.data holds today's data as a pandas dataframe
 
-                # simulate all the ticks for the current day
-
-                # first find the starting time
-                # the start time will be the first spot of the "time" column of the dataset
-                # note that it is a datetime object so it includes the current data as well and not just the time.
                 cur_time = self.current_time
                 cur_time = datetime.fromisoformat(str(cur_time))
 
-                # get the data for the current tick
                 try:
-                    tick_data_mask = self.data["time"] == datetime.isoformat(cur_time)
-                    self.tickdata = self.data[tick_data_mask]
-                except:  # if data cannot be loaded (data for the current date and time does not exist in the current loaded data)
+                    self.tickdata = self.data[self.data["time"] == datetime.isoformat(cur_time)]
+                except: 
                     break
-                ticker_data_dict = {}
                 
-                ticker_data_dict = dict(zip(self.tickers,self.tickdata['open'].astype(float).to_list()))
+                ticker_data_dict = dict(zip(self.tickdata["name"],self.tickdata['close'].astype(float).to_list()))
+                self.current_prices.update(ticker_data_dict)
                 tickOrders = self.algo.update(ticker_data_dict)
-                     
                 tickOrders = list(tickOrders.items())
 
                 for order in tickOrders:
                     share = 0 
-                    if order[1] == 'BUY': share = 1
-                    else: share = -1
-                    
-                    if order[0] in ticker_data_dict:
-                        price = ticker_data_dict[order[0]] 
-                        self.portfolio.place_order(order[0], price, share)
-                    # else:
-                        # print(f"No price data for {order[0]} at {self.current_time}, skipping this order\n")
+                    if order[1] == 'BUY': 
+                        share = 1
+                    elif order[1] == 'SELL': 
+                        share = -1
+                    if share != 0 and order[0] in self.current_prices:
+                        price = self.current_prices[order[0]]
+                        self.portfolio.place_order(order[0], price, share, self.current_time)
+
                 self.current_time += timedelta(minutes=self.tick_rate)
 
             else: # end of a trading day
+                pbar.update(1)
                 self.calculate_assets('close')
                 self.current_time = self.next_nearest_trading_date(self.current_time)
                 self.current_date = self.current_time.date()
-
+        pbar.update(1)
         self.calculate_assets('close')
         self.calculate_daily_gain_loss()
         self.calculate_sharpe_ratio()
 
         runtime = time.time() - algoStartTime
         print("Finished")
+        pbar.close()
         print("\n Runtime was %s seconds" % runtime)
         self.make_viz()
-
-    def log(self, msg, time):
-        """
-        This function logs every action that the strategy has taken, from
-        stock selection to buying/selling a stock
-        The logs should be display alongside the curves and visualizing
-
-        msg: a string that describes the action to be logged
-        time: the time that the action took place
-        """
-        self.log.append([msg, time])
 
     def make_viz(
         self,
@@ -272,9 +258,6 @@ class Strategy:
                 f.write("\n")
         file_path_stats = os.path.join(file_path,"statistics.txt")
         with open(file_path_stats, "w+") as f:
-            f.write(
-                f"The winrate of your strategy over the time interval of ({self.start_date},{self.end_date}) is {self.win_rate}\n"
-            )
             f.write(f"The sharpe ratio is {self.sharpe_ratio}\n")
         return
 
@@ -289,15 +272,11 @@ class Strategy:
         balance = self.portfolio.get_balance()  # current balance of the portfolio
         holdings = self.portfolio.get_holdings()  # current holdings of the portfolio
         
-        for h in holdings:
-            # str_time = self.current_time.strftime("%Y-%m-%d %H:%M:%S")
-            partial_data = self.data[self.data["name"] == h[0]]
-            partial_data =  self.data[self.data["time"] == self.current_time]
-            if not partial_data.empty:
-                curr_price = float(partial_data['close'])
-                # increment the running sum of total by the number of holdings by the current price of holding
-                total_holdings += h[1] * curr_price
-            
+        for ticker, asset in holdings.items():
+            curr_price = self.current_prices[ticker]
+            # print(asset.get_amount())
+            total_holdings += asset.get_amount() * curr_price
+
         if mode == 'open':
             self.total_daily_assets_open.append(total_holdings + balance)
         else:

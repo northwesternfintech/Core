@@ -68,6 +68,7 @@ class dummy:
     def update(self, sth):
         self.tick += 1
         if self.tick % 2 == 0:
+            
             return self.buy_dict
         else:
             return self.sell_dict

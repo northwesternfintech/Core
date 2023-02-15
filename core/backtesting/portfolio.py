@@ -37,7 +37,7 @@ class portfolio:
             except:
                 return False # no such stock in holdings and cannot sell
 
-    def place_order(self, stock_name, stock_price, shares):
+    def place_order(self, stock_name, stock_price, shares, time):
         """
         this function handles both buys and sells (shares > 0 for buy and < 0 for sell)
         first validate the order, if is valid, place the order and return True
@@ -47,10 +47,13 @@ class portfolio:
         shares: int
         stock_name: string
         """
+        # for k,v in self.holdings.items():
+        #     print(f"{v}")
+        # print(f"{stock_price}, {shares}")
         if self.validate_order(stock_name, stock_price, shares):
-
+            
             if shares > 0:  # buy
-                self.transactions.append(["buy", stock_name, stock_price, shares])
+                self.transactions.append(["buy", stock_name, stock_price, shares, time])
                 self.balance -= stock_price * shares * (1 + self.transaction_cost)
 
                 if not stock_name in self.get_holdings():
@@ -60,10 +63,9 @@ class portfolio:
 
                 return True
             else: # sell
-                shares = -shares
                 net = shares * stock_price
-                self.transactions.append(["sell", stock_name, stock_price, shares])
-                self.balance += stock_price * shares * (1 - self.transaction_cost)
+                self.transactions.append(["sell", stock_name, stock_price, shares, time])
+                self.balance += stock_price * abs(shares) * (1 + self.transaction_cost)
 
                 if not stock_name in self.get_holdings():
                     self.holdings[stock_name] = asset(stock_name)
@@ -75,9 +77,9 @@ class portfolio:
 
         return False
 
-p = portfolio(starting_balance= 10000)
-p.place_order(stock_name = "test", stock_price=1050, shares = 1)
-p.place_order(stock_name = "test", stock_price=1040, shares = -1)
-print(p.get_transactions())
+# p = portfolio(starting_balance= 10000)
+# p.place_order(stock_name = "test", stock_price=1050, shares = 1)
+# p.place_order(stock_name = "test", stock_price=1040, shares = -1)
+# print(p.get_transactions())
 
     
