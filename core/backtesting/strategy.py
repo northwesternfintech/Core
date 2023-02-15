@@ -181,22 +181,17 @@ class Strategy:
                 tickOrders = self.algo.update(ticker_data_dict)
                      
                 tickOrders = list(tickOrders.items())
-                # print(tickOrders)
+
                 for order in tickOrders:
                     share = 0 
                     if order[1] == 'BUY': share = 1
                     else: share = -1
                     
-                    # pandas built in loc function is way slower than partitioning the dataset twice
-                    # df = self.data.loc[(self.data['time']==self.current_time) & (self.data['name']==order[0])]
-                    
-                    df = self.data[self.data['time']==self.current_time]
-                    df = df[df['name']==order[0]]                    
-                    if not df.empty:
-                        self.portfolio.place_order(order[0], float(df['close'].iloc[0]), share)
-                    else:
-                        print(f"No price data for {order[0]} at {self.current_time}, skipping this order\n")
-                    del df
+                    if order[0] in ticker_data_dict:
+                        price = ticker_data_dict[order[0]] 
+                        self.portfolio.place_order(order[0], price, share)
+                    # else:
+                        # print(f"No price data for {order[0]} at {self.current_time}, skipping this order\n")
                 self.current_time += timedelta(minutes=self.tick_rate)
 
             else: # end of a trading day
