@@ -30,6 +30,8 @@ class Manager(ProcessManager):
                  broker_uuid: str,
                  broker_address: str,
                  worker_address: str,
+                 publish_address: str,
+                 subscribe_address: str,
                  redis_host: str,
                  redis_port: int,
                  num_threads=5,
@@ -42,6 +44,10 @@ class Manager(ProcessManager):
 
         self._manager_uuid = manager_uuid.encode()
         self._broker_uuid = broker_uuid.encode()
+        self._broker_address = broker_address
+        self._worker_address = worker_address
+        self._publish_address = publish_address
+        self._subscribe_address = subscribe_address
 
         self._num_threads = num_threads
         self._max_processes = max_processes
@@ -49,7 +55,7 @@ class Manager(ProcessManager):
         self._heartbeat_interval_s = heartbeat_interval_s
         self._heartbeat_timeout_s = heartbeat_timeout_s
         self._heartbeat_liveness = heartbeat_liveness
-        
+
         self._broker_last_seen = time.time()
         self._broker_liveness = self._heartbeat_liveness
 
@@ -84,27 +90,31 @@ class Manager(ProcessManager):
         """
         while not self._kill.is_set():
             frames = await self._worker_fe.recv_multipart()
+            print(f"RAW WORKER MESSAGE: {frames}")
 
             if not frames:
                 continue
 
-            msg = frames[1:]
+            msg = frames
 
             if len(msg) != 3:
                 continue
 
             worker_address = msg[0]
-            status = msg[1]
-            status_details = msg[2]
+            status = msg[1].decode()
+            status_details = msg[2].decode()
 
             if await self._redis_conn.exists(worker_address):
-                entry = await self._redis_conn.get(worker_address)
+                entry = (await self._redis_conn.get(worker_address)).decode()
                 entry = json.loads(entry)
+
+                if entry["status"] == "STOPPED":
+                    continue
 
                 entry["status"] = status
                 entry["status_details"] = status_details
 
-                await self._redis_conn.set(worker_address, entry)
+                await self._redis_conn.set(worker_address, json.dumps(entry).encode())
 
     async def _handle_mgr_be_socket(self):
         """Handles the following tasks:
@@ -174,6 +184,7 @@ class Manager(ProcessManager):
         # self._tasks = [self._consume_messages() for _ in range(self._num_threads)]
         self._tasks = [
             asyncio.create_task(self._handle_mgr_be_socket()),
+            asyncio.create_task(self._handle_worker_fe_socket()),
             asyncio.create_task(self._send_heartbeat())
         ]
 
@@ -237,6 +248,16 @@ def cli_run():
     )
 
     parser.add_argument(
+        "--publish-address", required=True,
+        help="address for web sockets to publish to"
+    )
+
+    parser.add_argument(
+        "--subscribe-address", required=True,
+        help="address for processes to receive data"
+    )
+
+    parser.add_argument(
         "--redis-host", required=True,
         help="host of redis server to use"
     )
@@ -280,6 +301,8 @@ def cli_run():
         args.broker_uuid,
         args.broker_address,
         args.worker_address,
+        args.publish_address,
+        args.subscribe_address,
         args.redis_host,
         args.redis_port,
         max_processes=args.max_processes,

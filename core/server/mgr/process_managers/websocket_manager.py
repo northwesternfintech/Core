@@ -6,6 +6,7 @@ from ...workers.web_socket_worker import WebSocketWorker
 from .process_manager import ProcessManager
 from ... import protocol
 import json
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,15 @@ class WebSocketManager(ProcessManager):
             Keyword arguments. Must contain keys "exchange", "tickers"
         """
         # Check and validate params
-        worker_uuid = str(uuid.uuid4())
+        required_params = {
+            "exchange": str,
+            "tickers": list
+        }
+
+        res = await self._validate_func_params(client_address, params, required_params)
+
+        if not res:
+            return
 
         # Generate command to start worker
         num_workers = await self._redis_conn.get("num_workers")
@@ -97,6 +106,21 @@ class WebSocketManager(ProcessManager):
         await self._redis_conn.incr("num_workers")
 
         # Start worker using subprocess
+        worker_uuid = str(uuid.uuid4())
+
+        cmd = (
+            f"web-socket-worker "
+            f"--worker-uuid {worker_uuid} "
+            f"--manager-uuid {self._manager._manager_uuid.decode()} "
+            f"--broker-uuid {self._manager._broker_uuid.decode()} "
+            f"--broker-address {self._manager._worker_address} "
+            f"--publish-address {self._manager._publish_address} "
+            f"--exchange {params['exchange']} "
+            f"--tickers {' '.join(params['tickers'])} "
+        )
+
+        p = subprocess.Popen(cmd.split(), shell=False, start_new_session=True)
+        print(p)
 
         worker_entry = {
             "worker_uuid": worker_uuid,
@@ -140,7 +164,7 @@ class WebSocketManager(ProcessManager):
         # Check if worker is active
 
         msg_content = [protocol.DIE]
-        self._send_worker_message(worker_address, msg_content)
+        await self._send_worker_message(worker_address, msg_content)
 
         await self._redis_conn.decr("num_workers")
 
@@ -164,7 +188,6 @@ class WebSocketManager(ProcessManager):
             Keyword arguments. Must contain keys "uuid". "uuid" must correspond to
             a valid web socket worker
         """
-        print("HERE")
         entry = await self._fetch_worker_redis_entry(client_address, **params)
         print(entry)
 

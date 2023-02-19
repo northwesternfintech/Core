@@ -13,15 +13,19 @@ class WebSocketWorker(Worker):
     websockets
     """
     def __init__(self,
+                 worker_uuid: str,
+                 manager_uuid: str,
+                 broker_uuid: str,
                  exchange: str,
                  tickers: List[str],
                  publish_addres: str,
-                 worker_uuid,
                  broker_address: str,
                  heartbeat_interval_s: int = 1,
                  heartbeat_timeout_s: int = 1,
                  heartbeat_liveness: int = 3,):
         super().__init__(worker_uuid,
+                         manager_uuid,
+                         broker_uuid,
                          broker_address,
                          heartbeat_interval_s,
                          heartbeat_timeout_s,
@@ -32,12 +36,12 @@ class WebSocketWorker(Worker):
 
     async def _shutdown(self):
         await self._websocket._ccxt_exchange.close()
-        self._ws_consumer._close()
+        await self._ws_consumer._close()
 
-        super()._shutdown()
+        await super()._shutdown()
 
     async def _run_async(self):
-        tasks = super()._get_heartbeat_tasks()
+        tasks = await super()._get_heartbeat_tasks()
         tasks.append(asyncio.create_task(self._websocket._run_async()))
 
         try:
@@ -54,6 +58,18 @@ class WebSocketWorker(Worker):
 def cli_run():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--worker-uuid", required=True,
+        help="uuid of worker"
+    )
+    parser.add_argument(
+        "--manager-uuid", required=True,
+        help="uuid of manager"
+    )
+    parser.add_argument(
+        "--broker-uuid", required=True,
+        help="uuid of broker"
+    )
+    parser.add_argument(
         "--exchange", required=True,
         help="Exchange to pull data from"
     )
@@ -64,10 +80,6 @@ def cli_run():
     parser.add_argument(
         "--publish-address", required=True,
         help="Address to publish data to"
-    )
-    parser.add_argument(
-        "--worker-uuid", required=True,
-        help="uuid of worker"
     )
     parser.add_argument(
         "--broker-address", required=True,
@@ -90,10 +102,12 @@ def cli_run():
     )
     args = parser.parse_args()
 
-    worker = WebSocketWorker(args.exchange,
+    worker = WebSocketWorker(args.worker_uuid,
+                             args.manager_uuid,
+                             args.broker_uuid,
+                             args.exchange,
                              args.tickers,
                              args.publish_address,
-                             args.worker_uuid,
                              args.broker_address,
                              args.heartbeat_interval_s,
                              args.heartbeat_timeout_s,

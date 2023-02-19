@@ -13,6 +13,8 @@ class Worker:
     """
     def __init__(self,
                  worker_uuid: str,
+                 manager_uuid: str,
+                 broker_uuid: str,
                  heartbeat_address: str,
                  heartbeat_interval_s: int = 1,
                  heartbeat_timeout_s: int = 3,
@@ -38,6 +40,8 @@ class Worker:
             dying, by default 3
         """
         self._worker_uuid = worker_uuid
+        self._manager_uuid = manager_uuid.encode()
+        self._broker_uuid = broker_uuid.encode()
 
         self._context = zmq.asyncio.Context()
 
@@ -52,7 +56,6 @@ class Worker:
         self._poller = zmq.asyncio.Poller()
         self._poller.register(self._broker_socket, zmq.POLLIN)
         self._broker_socket.connect(heartbeat_address)
-        self._broker_socket.send(protocol.READY)
 
         self._kill = asyncio.Event()
 
@@ -71,13 +74,16 @@ class Worker:
 
             if socks.get(self._broker_socket) == zmq.POLLIN:
                 frames = await self._broker_socket.recv_multipart()
+                print(f"Worker received: {frames}")
 
                 if not frames:
                     self._kill.set()
                     break
 
                 if len(frames) == 1 and frames[0] == protocol.DIE:
-                    self._shutdown()
+                    print("SHUTTING DOWN")
+                    self._kill.set()
+                    break
                 elif len(frames) == 1 and frames[0] == protocol.HEARTBEAT:
                     liveness = self._heartbeat_liveness
             else:
@@ -97,7 +103,7 @@ class Worker:
 
         while not self._kill.is_set():
             if time.time() > heartbeat_at:
-                self._broker_socket.send(protocol.HEARTBEAT)
+                self._broker_socket.send_multipart([protocol.HEARTBEAT])
                 heartbeat_at = time.time() + self._heartbeat_interval_s
             await asyncio.sleep(5e-2)
 
@@ -111,7 +117,8 @@ class Worker:
         for task in self._tasks:
             task.cancel()
 
-    def _get_heartbeat_tasks(self):
+    async def _get_heartbeat_tasks(self):
+        await self._broker_socket.send_multipart([protocol.READY])
         self._tasks = [
             asyncio.create_task(self._handle_broker_messages()),
             asyncio.create_task(self._send_heartbeat()),

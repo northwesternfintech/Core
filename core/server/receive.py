@@ -168,14 +168,20 @@ def run_worker(context, address, i=None, should_fail=False):
 
 def main():
     context = zmq.Context(1)
-    client = context.socket(zmq.REQ)
-    client.connect("tcp://localhost:5555")
-    worker = context.socket(zmq.DEALER)
-    worker.connect("tcp://localhost:5556")
+    # client = context.socket(zmq.REQ)
+    # client.connect("tcp://localhost:5555")
+    # worker = context.socket(zmq.DEALER)
+    # worker.connect("tcp://localhost:5556")
 
-    client.send(b"test")
-    worker.send(b"\x01")
-    print("DONE")
+    # client.send(b"test")
+    # worker.send(b"\x01")
+    # print("DONE")
+    socket = context.socket(zmq.SUB)
+    socket.connect("tcp://127.0.0.1:6000")
+    socket.setsockopt_string(zmq.SUBSCRIBE, "BTC/USD")
+
+    while True:
+        print(socket.recv_multipart())
 
 
     # from concurrent.futures import ThreadPoolExecutor

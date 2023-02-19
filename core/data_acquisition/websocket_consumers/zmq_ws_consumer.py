@@ -20,7 +20,6 @@ class ZmqWSConsumer(WebSocketConsumer):
         self._pub_socket = context.socket(zmq.PUB)
         self._pub_socket.connect(address)
 
-
     async def _async_consume(self, data_queue):
         while True:
             data = await data_queue.get()
@@ -31,3 +30,7 @@ class ZmqWSConsumer(WebSocketConsumer):
 
             await self._pub_socket.send_multipart(msg)
             data_queue.task_done()
+
+    async def _close(self):
+        self._pub_socket.setsockopt(zmq.LINGER, 0)
+        self._pub_socket.close()

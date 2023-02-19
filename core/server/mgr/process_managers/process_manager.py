@@ -113,6 +113,20 @@ class ProcessManager(ABC):
         entry = json.loads(entry.decode())
         return entry
 
+    async def _validate_func_params(self, client_address, provided_params, required_params):
+        for param, param_type in required_params.items():
+            if param not in provided_params:
+                msg_content = [protocol.ERROR, f"Missing parameter {param}".encode()]
+                await self._send_client_response(client_address, msg_content)
+                return False
+
+            if not isinstance(provided_params[param], param_type):
+                msg_content = [protocol.ERROR, f"Invalid paramater type for {param}".encode()]
+                await self._send_client_response(client_address, msg_content)
+                return False
+
+        return True
+
     async def _send_client_response(self, client_address: ByteString, message: List):
         """Sends message to client
 
@@ -138,7 +152,7 @@ class ProcessManager(ABC):
         message : List
             Content of message to send to worker
         """
-        msg = [self._broker_uuid, worker_address] + message
+        msg = [worker_address.encode()] + message
         print(msg)
         await self._worker_fe.send_multipart(msg)
         print("SENT")

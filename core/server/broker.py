@@ -93,6 +93,8 @@ class Broker:
             f"--broker-uuid={self._broker_uuid.decode()} "
             f"--broker-address={convert_tcp_address(self._manager_address)} "
             f"--worker-address={convert_tcp_address(self._backend_address)} "
+            f"--publish-address={self._publish_address} "
+            f"--subscribe-address={self._subscribe_address} "
             f"--redis-host={self._redis_host} "
             f"--redis-port={self._redis_port} "
         )
@@ -161,7 +163,6 @@ class Broker:
         5. Params: parameters to pass to the command as a json dumped byte string
         """
         while not self._kill.is_set():
-            print("_manager_client_fe")
             frames = await self._client_fe.recv_multipart()
             print(f"RECEIVED FROM CLIENT: {frames}")
             client_address = frames[0]
@@ -181,7 +182,6 @@ class Broker:
         heartbeat_at = time.time() + self._heartbeat_interval_s
 
         while not self._kill.is_set():
-            print("_manager_mgr_fe")
             socks = await self._mgr_fe_poller.poll(self._heartbeat_timeout_s * 1000)
             socks = dict(socks)
 
@@ -198,11 +198,10 @@ class Broker:
                     continue
 
                 msg = frames[1:]
-                print(msg)
 
                 # Check if heartbeat
                 if len(msg) == 1 and msg[0] == protocol.HEARTBEAT:
-                    print("Receved manager heartbeat")
+                    # print("Receved manager heartbeat")
                     self._manager_liveness = self._heartbeat_liveness
                 else:
                     # Forward message to client
@@ -247,12 +246,18 @@ class Broker:
 
             if socks.get(self._worker_be) == zmq.POLLIN:
                 frames = await self._worker_be.recv_multipart()
+                print(f"_manager_worker_be: {frames}")
 
-                worker_address = frames[0]
+                address = frames[0]
                 msg = frames[1:]
 
-                if len(msg) == 1:
+                if address == self._manager_uuid:
+                    # Forward message to worker
+                    msg = frames[1:]
+                    await self._worker_be.send_multipart(msg)
+                elif len(msg) == 1:
                     # Registers worker
+                    worker_address = address
                     if msg[0] == protocol.READY:
                         self._workers.add(worker_address)
                         self._worker_liveness[worker_address] = self._heartbeat_liveness
@@ -285,8 +290,9 @@ class Broker:
                     msg = [worker, protocol.DIE]
                     await self._worker_be.send_multipart(msg)
 
-                    msg = [self._manager_uuid, worker_address, protocol.DIE, b"timeout"]
-                    await self._mgr_fe.send_multipart(msg)
+                    msg = [self._manager_uuid, worker, protocol.DIE, b"timeout"]
+                    await self._worker_be.send_multipart(msg)
+                    print("sent kill msg")
 
             for worker in killed_workers:
                 self._workers.remove(worker)
@@ -309,7 +315,7 @@ class Broker:
         self._tasks = [
             asyncio.create_task(self._manage_client_fe()),
             asyncio.create_task(self._manage_mgr_fe()),
-            # asyncio.create_task(self._manage_worker_be()),
+            asyncio.create_task(self._manage_worker_be()),
             # asyncio.create_task(self._manage_client_be())
         ]
         try:

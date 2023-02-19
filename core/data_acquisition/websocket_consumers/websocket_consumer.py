@@ -37,10 +37,10 @@ class WebSocketConsumer(ABC):
         try:
             await asyncio.gather(*tasks)
         except asyncio.exceptions.CancelledError:
-            self._close()
+            await self._close()
             return
         except Exception as e:
-            self._close()
+            await self._close()
             raise e
 
     def _close(self):
