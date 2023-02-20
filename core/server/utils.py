@@ -1,6 +1,8 @@
 import socket
+import zmq
+import zmq.asyncio
 
-from typing import List
+from typing import List, Optional, Dict
 
 
 def is_port_in_use(port: int) -> bool:
@@ -49,3 +51,46 @@ def convert_tcp_address(tcp_address: str, interface: str = "localhost"):
         wildcard is found, return tcp_address
     """
     return tcp_address.replace("*", interface)
+
+
+async def send_zmq_req(message: List[str], address: str, timeout_s=5) -> Optional[List]:
+    """Decodes message to bytes, sends message to ZMQ as REQ, polls for response
+
+    Parameters
+    ----------
+    message : Dict
+        Multipart messae to serialize and send to ZMQ
+    address : str
+        Address for socket to connect/send to
+    timeout_s : int, optional
+        Polling timeout, by default 5
+
+    Returns
+    -------
+    Optional[List]
+        Returns response or None if timeout
+    """
+    context = zmq.asyncio.Context()
+    poller = zmq.asyncio.Poller()
+    socket = context.socket(zmq.REQ)
+    socket.connect(address)
+    poller.register(socket, zmq.POLLIN)
+
+    for i, frame in enumerate(message):
+        message[i] = frame.encode()
+
+    await socket.send_multipart(message)
+
+    socks = await poller.poll(timeout_s * 1000)
+    socks = dict(socks)
+    
+    res = None
+    if socks.get(socket) == zmq.POLLIN:
+        res = (await socket.recv_multipart())[1:]
+
+    socket.setsockopt(zmq.LINGER, 0)
+    socket.close()
+    context.term()
+    
+    return res
+

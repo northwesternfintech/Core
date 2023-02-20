@@ -149,6 +149,7 @@ class WebSocketManager(ProcessManager):
             Keyword arguments. Must contain keys "uuid". "uuid" must correspond to
             an active web socket worker
         """
+        print(params)
         entry = await self._fetch_worker_redis_entry(client_address, **params)
 
         if entry is None:

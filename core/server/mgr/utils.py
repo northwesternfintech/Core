@@ -1,6 +1,8 @@
 import socket
+import zmq
+import zmq.asyncio
 
-from typing import List
+from typing import List, Dict, Optional, ByteString
 
 
 def is_port_in_use(port: int) -> bool:
@@ -34,3 +36,5 @@ def find_open_ports(num_ports) -> List[int]:
         sock.close()
 
     return free_ports
+
+

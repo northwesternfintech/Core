@@ -184,6 +184,8 @@ class Manager(ProcessManager):
         # self._tasks = [self._consume_messages() for _ in range(self._num_threads)]
         self._tasks = [
             asyncio.create_task(self._handle_mgr_be_socket()),
+            asyncio.create_task(self._handle_mgr_be_socket()),
+            asyncio.create_task(self._handle_mgr_be_socket()),
             asyncio.create_task(self._handle_worker_fe_socket()),
             asyncio.create_task(self._send_heartbeat())
         ]
