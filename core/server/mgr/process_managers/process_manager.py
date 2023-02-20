@@ -1,11 +1,9 @@
-import concurrent.futures
-import logging
-import multiprocessing
-import subprocess
-from abc import ABC
-from typing import Dict, List, Set, Union, Optional, Tuple, ByteString
-from ... import protocol
 import json
+import logging
+from abc import ABC
+from typing import ByteString, Dict, List, Optional, Tuple
+
+from ... import protocol
 
 logger = logging.getLogger(__name__)
 

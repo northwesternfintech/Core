@@ -1,12 +1,11 @@
-import logging
-import uuid
-from typing import Dict, List, Set, Union, ByteString
-
-from ...workers.web_socket_worker import WebSocketWorker
-from .process_manager import ProcessManager
-from ... import protocol
 import json
+import logging
 import subprocess
+import uuid
+from typing import ByteString, Dict
+
+from ... import protocol
+from .process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
 

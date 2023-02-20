@@ -7,7 +7,7 @@ import requests
 
 from tabulate import tabulate
 
-from .mgr.utils import find_open_ports
+from .utils import find_open_ports
 
 DIR_HOME = os.path.expanduser('~')
 DIR_NUFT = os.path.join(DIR_HOME, '.nuft')

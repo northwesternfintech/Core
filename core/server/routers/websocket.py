@@ -1,12 +1,11 @@
-import logging
-import uuid
-from typing import List
-
-from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import JSONResponse
-from ..utils import send_zmq_req
-from .. import protocol
 import json
+import logging
+
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
+
+from .. import protocol
+from ..utils import send_zmq_req
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,8 @@ async def start_websockets(info: Request):
     ------------------
     ticker_names : List[str]
         List of names of tickers to start
+    exchange : str
+        Name of exchange to pull ticker data from
 
     Returns
     -------
@@ -40,7 +41,6 @@ async def start_websockets(info: Request):
     if len(res) != 2:
         raise JSONResponse(status_code=500, detail=f"Bad server response: {res}")
 
-    print(res)
     status = res[0]
     status_code = 200 if status == protocol.ACK else 500
 
@@ -52,7 +52,6 @@ async def start_websockets(info: Request):
         )
 
     worker_uuid = res[1].decode()
-    print(worker_uuid)
     return worker_uuid
 
 
@@ -63,19 +62,15 @@ async def stop_websockets(worker_uuid):
 
     Request Parameters
     ------------------
-    worker_uuids : List[str]
-        uuid of web sockets to stop
+    worker_uuids : str
+        uuid of web socket to stop
 
     Returns
     -------
     200
         If successfully stops web sockets
-    400
-        If malformed inputs
-    404
-        If uuid name can't be found
-    500
-        If fails to stop websocket
+    500, details
+        Returns error details if encounters server error
     """
     message = ["websocket", "stop", json.dumps({"uuid": worker_uuid})]
     address = "tcp://localhost:5557"
@@ -105,14 +100,13 @@ async def websockets_status(worker_uuid: str):
     ------------------
     worker_uuid : str
         uuids of web socket to get status of
+
     Returns
     -------
-    str, 200
-        If successfully retrieves web socket status
-    404
-        If failed to find active uuid
-    500
-        Manager error
+    200, json
+        JSON with websocket status if successful
+    500, details
+        Returns error details if encounters server error
     """
     message = ["websocket", "status", json.dumps({"uuid": worker_uuid})]
     address = "tcp://localhost:5557"
@@ -137,4 +131,3 @@ async def websockets_status(worker_uuid: str):
         status_code=status_code,
         content=details
     )
-
