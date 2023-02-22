@@ -18,7 +18,7 @@ class WebSocketWorker(Worker):
                  broker_uuid: str,
                  exchange: str,
                  tickers: List[str],
-                 publish_addres: str,
+                 publish_address: str,
                  broker_address: str,
                  heartbeat_interval_s: int = 1,
                  heartbeat_timeout_s: int = 1,
@@ -31,7 +31,7 @@ class WebSocketWorker(Worker):
                          heartbeat_timeout_s,
                          heartbeat_liveness)
 
-        self._ws_consumer = ZmqWSConsumer(self._context, publish_addres)
+        self._ws_consumer = ZmqWSConsumer(self._context, publish_address)
         self._websocket = CCXTWebSocket(exchange, tickers, self._ws_consumer)
 
     async def _shutdown(self):

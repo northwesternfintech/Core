@@ -1,11 +1,12 @@
 
 import asyncio
+import sys
+import time
+from random import randint
 
+import zmq
 from aio_pika import ExchangeType, connect
 from aio_pika.abc import AbstractIncomingMessage
-import zmq
-import sys
-
 
 # async def on_message(message: AbstractIncomingMessage) -> None:
 #     async with message.process():
@@ -75,10 +76,7 @@ import sys
 #   Author: Daniel Lundin <dln(at)eintr(dot)org>
 #
 
-from random import randint
-import time
 
-import zmq
 
 HEARTBEAT_LIVENESS = 3
 HEARTBEAT_INTERVAL = 1

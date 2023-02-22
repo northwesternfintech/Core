@@ -5,6 +5,7 @@ import zmq
 import zmq.asyncio
 
 from .. import protocol
+from typing import ByteString
 
 
 class Worker:
@@ -103,9 +104,23 @@ class Worker:
 
         while not self._kill.is_set():
             if time.time() > heartbeat_at:
-                self._broker_socket.send_multipart([protocol.HEARTBEAT])
+                await self._broker_socket.send_multipart([protocol.HEARTBEAT])
                 heartbeat_at = time.time() + self._heartbeat_interval_s
             await asyncio.sleep(5e-2)
+
+    async def _send_status_message(self, status: ByteString, message: str):
+        """Sends status message to manager
+
+        Parameters
+        ----------
+        status : ByteString
+            Bytestring containing the status type per protocol
+        message : str
+            String conaining status message
+        """
+        msg = [status, message.encode()]
+        await self._broker_socket.send_multipart(msg)
+
 
     async def _shutdown(self):
         """Closes connections with broker and stops tasks"""
