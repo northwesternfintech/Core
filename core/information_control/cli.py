@@ -97,7 +97,6 @@ def docker_handler():
 @click.argument('img')
 def docker_generate(repo, file, img):
     result = repo_to_container(repo, file, img)
-    click.echo("Done")
 
 
 @app.command('shutdown')
