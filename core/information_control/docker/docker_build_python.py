@@ -16,6 +16,8 @@ def create_dockerfile(directory):
         f.write('COPY . /app\n')
         f.write('WORKDIR /app\n')
         
+
+        # Check for whether or not a certain type of dependencies file exists (e.g. requirements.txt) and if so, install related dependencies
         f.write('RUN apt-get update && apt-get install -y python3.10 python3-pip &&\
                  test -f requirements.txt && pip3 install -r requirements.txt || true && \
                  test -f Pipfile.lock && pipenv install --ignore-pipfile || true && \
