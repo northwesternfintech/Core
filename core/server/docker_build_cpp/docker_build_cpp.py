@@ -27,9 +27,11 @@ def create_Dockerfile(path, relative_file_path):
 	UPDATE = '\n\nRUN apt-get -y install'
 
 	INSTALLATIONS = f'\n\nRUN apt-get -y update && apt-get install -y'
-	packages = ['build-essential', 'clang', 'cmake', 'gdb', 'wget']
+	packages = ['build-essential', 'clang', 'cmake', 'gdb', 'wget', 'python3-pip',]
 	for package in packages:
 		INSTALLATIONS += f' \\\n{package}'
+	
+	PYBIND = '\n\nRUN pip install pybind11'
 
 	COPY = '\n\nCOPY . /usr/src/docker'
 
@@ -39,20 +41,24 @@ def create_Dockerfile(path, relative_file_path):
 	file_name = relative_file_path.split('/')[-1].split('.')[0]
 
 	### install dependencies here!
-	MAKE = F'\n\nRUN make' if os.path.exists(f"{path}makefile") else ''
+	# MAKE = f'\n\nRUN make' if os.path.exists(f"{path}makefile") else '' # change to Cmake
 
-	COMPILE = f'\n\nRUN g++ -o {file_name} {relative_file_path}'
+	CMAKE = f'\n\nRUN mkdir build\nRUN cmake -S . -B build && cmake --build build' # if os.path.exists("CMakeLists.txt") else ''
 
-	RUN = f'\n\nCMD ["./{file_name}"]'
+	# COMPILE = f'\n\nRUN g++ -o {file_name} {relative_file_path}'
 
-	DOCKERFILE = ''.join([BASE_IMAGE, UPDATE, INSTALLATIONS, COPY, WORKDIR, MAKE, COMPILE, RUN])
+	RUN = f'\n\nCMD ["./build/{file_name}"]'
+
+	DOCKERFILE = ''.join([BASE_IMAGE, UPDATE, INSTALLATIONS, PYBIND, COPY, WORKDIR, CMAKE, RUN])
 
 	with open(f'{path}/Dockerfile', 'w+') as Dockerfile:
 		Dockerfile.write(DOCKERFILE)
 
 def main():
-	# path = "./Strats/Template/stevenewald/"
-	# relative_file_path = 'multistrat.cpp'
-	# create_Dockerfile(path, relative_file_path)
-	# for testing on Desk-Alpha on steve-dev
-	pass
+	# demo
+	path = "./core/server/docker_build_cpp"
+	relative_file_path = 'helloworld.cpp'
+	create_Dockerfile(path, relative_file_path)
+
+if __name__ == "__main__":
+	main()

@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.18)
+project(helloworld)
+add_executable(helloworld helloworld.cpp)
+configure_file(helloworld.h.in helloworld.h)
+target_include_directories(helloworld PUBLIC "${PROJECT_BINARY_DIR}")
